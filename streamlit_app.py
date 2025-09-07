@@ -480,64 +480,57 @@ if submitted:
         errors.append("סעיף 5: יש לענות על שלוש שאלות המוטיבציה.")
 
     # סעיף 6
-    if not confirm:
-        errors.append("סעיף 6: יש לאשר את ההצהרה.")
+    # --- סעיף 6 ---
+with tab6:
+    st.subheader("סיכום ושליחה")
 
-    st.session_state.errors = errors
+    st.markdown("להלן תקציר מלא של הפרטים שמולאו. \
+    אם יש טעות – עברו לטאב המתאים, תקנו וחזרו לכאן. לאחר האישור והלחיצה על **שליחה** המידע יישמר לקובץ.")
 
-    if errors:
-        st.error("נמצאו שגיאות בטופס. נא לתקן ולשלוח שוב.")
-        for e in errors:
-            st.markdown(f"- :red[{e}]")
-    else:
-        # בניית שורה לשמירה
-        rank_clean = {f"דירוג_{k}": v for k, v in ranks.items()}
-        row = {
-            "תאריך_שליחה": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            # סעיף 1
-            "שם_פרטי": first_name.strip(),
-            "שם_משפחה": last_name.strip(),
-            "תעודת_זהות": nat_id.strip(),
-            "מין": gender,
-            "שיוך_חברתי": social_affil,
-            "שפת_אם": other_mt.strip() if mother_tongue == "אחר..." else mother_tongue,
-            "שפות_נוספות": "; ".join(
-                [x for x in extra_langs if x != "אחר..."] + ([extra_langs_other.strip()] if "אחר..." in extra_langs else [])
-            ),
-            "טלפון": phone.strip(),
-            "כתובת": address.strip(),
-            "אימייל": email.strip(),
-            "שנת_לימודים": study_year_other.strip() if study_year == "אחר..." else study_year,
-            "מסלול_לימודים": track.strip(),
-            "ניידות": mobility_other.strip() if mobility == "אחר..." else mobility,
-            # סעיף 2
-            "הכשרה_קודמת": prev_training,
-            "הכשרה_קודמת_מקום_ותחום": prev_place.strip(),
-            "הכשרה_קודמת_מדריך_ומיקום": prev_mentor.strip(),
-            "הכשרה_קודמת_בן_זוג": prev_partner.strip(),
-            "תחומים_מועדפים": "; ".join([d for d in chosen_domains if d != "אחר..."] + ([domains_other.strip()] if "אחר..." in chosen_domains else [])),
-            "תחום_מוביל": top_domain if top_domain and top_domain != "— בחר/י —" else "",
-            "בקשה_מיוחדת": special_request.strip(),
-            # סעיף 3
-            "ממוצע": avg_grade,
-            # סעיף 4
-            "התאמות": "; ".join([a for a in adjustments if a != "אחר..."] + ([adjustments_other.strip()] if "אחר..." in adjustments else [])),
-            "התאמות_פרטים": adjustments_details.strip(),
-            # סעיף 5
-            "מוטיבציה_1": m1, "מוטיבציה_2": m2, "מוטיבציה_3": m3,
-        }
-        row.update(rank_clean)
+    # תקציר נוח לקריאה לפי קבוצות
+    st.markdown("### 🧑‍💻 פרטים אישיים")
+    st.table(pd.DataFrame([{
+        "שם פרטי": first_name, "שם משפחה": last_name, "ת״ז": nat_id, "מין": gender,
+        "שיוך חברתי": social_affil, "שפת אם": (other_mt if mother_tongue == "אחר..." else mother_tongue),
+        "שפות נוספות": "; ".join([x for x in extra_langs if x != "אחר..."] +
+                                   ([extra_langs_other] if "אחר..." in extra_langs else [])),
+        "טלפון": phone, "כתובת": address, "אימייל": email,
+        "שנת לימודים": (study_year_other if study_year == "אחר..." else study_year),
+        "מסלול לימודים": track,
+        "ניידות": (mobility_other if mobility == "אחר..." else mobility),
+    }]).T.rename(columns={0: "ערך"}))
 
-        try:
-            append_row(row, CSV_FILE)
-            st.session_state.submitted_ok = True
-            st.session_state.last_row = row
-            st.success("✅ הטופס נשלח ונשמר בהצלחה!")
-            st.download_button(
-                "📥 הורדת תשובה בודדת (CSV)",
-                data=pd.DataFrame([row]).to_csv(index=False, encoding="utf-8-sig"),
-                file_name="תשובה_שלי.csv",
-                mime="text/csv"
-            )
-        except Exception as e:
-            st.error(f"❌ שמירה נכשלה: {e}")
+    st.markdown("### 📍 העדפות שיבוץ")
+    ranks_clean = {f"דירוג {k}": v for k, v in ranks.items()}
+    st.table(pd.DataFrame([{
+        "הכשרה קודמת": prev_training,
+        "מקום/תחום (אם היה)": prev_place,
+        "מדריך/מיקום": prev_mentor,
+        "בן/בת זוג להתמחות": prev_partner,
+        "תחומים מועדפים": "; ".join([d for d in chosen_domains if d != "אחר..."] +
+                                   ([domains_other] if "אחר..." in chosen_domains else [])),
+        "תחום מוביל": (top_domain if top_domain and top_domain != "— בחר/י —" else ""),
+        "בקשה מיוחדת": special_request,
+        **ranks_clean
+    }]).T.rename(columns={0: "ערך"}))
+
+    st.markdown("### 🎓 נתונים אקדמיים")
+    st.table(pd.DataFrame([{"ממוצע ציונים": avg_grade}]).T.rename(columns={0: "ערך"}))
+
+    st.markdown("### 🧪 התאמות")
+    st.table(pd.DataFrame([{
+        "התאמות": "; ".join([a for a in adjustments if a != "אחר..."] +
+                            ([adjustments_other] if "אחר..." in adjustments else [])),
+        "פירוט התאמות": adjustments_details,
+    }]).T.rename(columns={0: "ערך"}))
+
+    st.markdown("### 🔥 מוטיבציה")
+    st.table(pd.DataFrame([{
+        "מוכנות להשקיע מאמץ": m1,
+        "חשיבות ההכשרה": m2,
+        "מחויבות והתמדה": m3,
+    }]).T.rename(columns={0: "ערך"}))
+
+    st.markdown("---")
+    confirm = st.checkbox("אני מאשר/ת כי המידע שמסרתי בטופס זה נכון ומדויק, וידוע לי שאין התחייבות להתאמה מלאה לבחירותיי. *")
+    submitted = st.button("שליחה ✉️")
