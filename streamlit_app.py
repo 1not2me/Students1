@@ -13,42 +13,86 @@ st.set_page_config(page_title="שאלון שיבוץ סטודנטים – תשפ
 # --- גופן David (כפי שביקשת) ---
 st.markdown("""
 <style>
-@font-face {
-  font-family: 'David';
-  src: url('https://example.com/David.ttf') format('truetype');
+:root{
+  --bg-1:#f6f9ff;   /* תכלת רך */
+  --bg-2:#fdf7ff;   /* סגלגל עדין */
+  --bg-3:#fff9f3;   /* אפרסק עדין */
+  --ink:#0f172a;    /* טקסט כהה נעים */
+  --primary:#5b6cff;/* כחול נעים */
+  --primary-700:#4754d1;
+  --ring:rgba(91,108,255,.35);
 }
-html, body, [class*="css"]  {
-  font-family: 'David', sans-serif !important;
+
+/* רקע כללי עם גרדיינט עדין */
+[data-testid="stAppViewContainer"]{
+  background:
+    radial-gradient(1200px 600px at 15% 5%, var(--bg-2) 0%, transparent 70%),
+    radial-gradient(900px 500px at 85% 10%, var(--bg-3) 0%, transparent 70%),
+    linear-gradient(135deg, var(--bg-1) 0%, #fbfdff 60%, #ffffff 100%) !important;
+  color: var(--ink);
+}
+
+/* כרטיס התוכן המרכזי – מעט “זכוכית” */
+.main .block-container{
+  background: rgba(255,255,255,.75);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(15,23,42,.05);
+  box-shadow: 0 12px 30px rgba(15,23,42,.06);
+  border-radius: 22px;
+  padding: 2rem 2rem 2.2rem;
+}
+
+/* כותרות */
+h1, h2, h3, .stMarkdown h1, .stMarkdown h2{
+  letter-spacing:.4px;
+  text-shadow: 0 1px 0 rgba(255,255,255,.6);
+}
+
+/* כפתורים יפים */
+.stButton > button{
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-700) 100%) !important;
+  color:#fff !important;
+  border:none !important;
+  border-radius: 14px !important;
+  padding:.7rem 1.15rem !important;
+  box-shadow: 0 6px 18px var(--ring) !important;
+  transition: transform .06s ease, box-shadow .2s ease filter .2s ease !important;
+}
+.stButton > button:hover{ transform: translateY(-1px); filter: brightness(1.02); }
+.stButton > button:focus{ outline: none !important; box-shadow: 0 0 0 4px var(--ring) !important; }
+
+/* אינפוטים ותיבות בחירה */
+div.stSelectbox > div, div.stMultiSelect > div,
+div[data-baseweb="select"] > div{
+  border-radius: 12px !important;
+  border: 1px solid rgba(15,23,42,.08) !important;
+  box-shadow: 0 2px 8px rgba(15,23,42,.03) !important;
+}
+
+/* RTL ויישור לימין (כולל select/multiselect) */
+.stApp, .main, [data-testid="stSidebar"]{ direction: rtl; text-align: right; }
+label, .stMarkdown, .stText, .stCaption{ text-align: right !important; }
+.row-widget.stRadio > div, div[role="radiogroup"]{ direction: rtl; text-align: right; }
+div[data-baseweb="select"]{ direction: rtl !important; text-align: right !important; }
+div[data-baseweb="select"] > div{ direction: rtl !important; text-align: right !important; }
+div[data-baseweb="select"] [class*="placeholder"],
+div[data-baseweb="select"] [class*="SingleValue"],
+div[data-baseweb="select"] [class*="ValueContainer"],
+div[data-baseweb="select"] input{ direction: rtl !important; text-align: right !important; }
+ul[role="listbox"]{ direction: rtl !important; text-align: right !important; }
+ul[role="listbox"] [role="option"],
+ul[role="listbox"] [role="option"] > div{ direction: rtl !important; text-align: right !important; }
+div[data-baseweb="select"] > div{ padding-right:.5rem; padding-left:.25rem; }
+
+/* טאבים – ריכוך */
+.stTabs [data-baseweb="tab"]{
+  border-radius: 12px !important;
+  background: rgba(255,255,255,.7);
+  margin-inline-start: .4rem;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# RTL + יישור לימין לכל הרכיבים כולל select/multiselect
-st.markdown("""
-<style>
-  .stApp, .main, [data-testid="stSidebar"] { direction: rtl; text-align: right; }
-  label, .stMarkdown, .stText, .stCaption { text-align: right !important; }
-  .row-widget.stRadio > div, div[role="radiogroup"] { direction: rtl; text-align: right; }
-
-  /* ===== Select / Multiselect ===== */
-  div[data-baseweb="select"] { direction: rtl !important; text-align: right !important; }
-  div[data-baseweb="select"] > div { direction: rtl !important; text-align: right !important; }
-  div[data-baseweb="select"] [class*="placeholder"],
-  div[data-baseweb="select"] [class*="SingleValue"],
-  div[data-baseweb="select"] [class*="ValueContainer"],
-  div[data-baseweb="select"] input {
-    direction: rtl !important;
-    text-align: right !important;
-  }
-  ul[role="listbox"] { direction: rtl !important; text-align: right !important; }
-  ul[role="listbox"] [role="option"],
-  ul[role="listbox"] [role="option"] > div {
-    direction: rtl !important;
-    text-align: right !important;
-  }
-  div[data-baseweb="select"] > div { padding-right: 0.5rem; padding-left: 0.25rem; }
-</style>
-""", unsafe_allow_html=True)
 
 CSV_FILE = Path("שאלון_שיבוץ.csv")
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")  # מומלץ לשמור בענן
