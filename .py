@@ -8,19 +8,29 @@ import re
 # =========================
 # הגדרות כלליות
 # =========================
-st.set_page_config(page_title='שאלון שיבוץ סטודנטים – תשפ״ו', layout='centered')
+st.set_page_config(page_title="שאלון שיבוץ סטודנטים – תשפ״ו", layout="centered")
 
-# RTL + יישור לימין לכל הרכיבים
+# RTL + יישור לימין לכל הרכיבים, כולל תיבות בחירה ותפריטים נפתחים
 st.markdown("""
 <style>
   .stApp, .main, [data-testid="stSidebar"] { direction: rtl; text-align: right; }
-  .row-widget.stRadio > div, div[role="radiogroup"], div[data-baseweb="select"] { direction: rtl; text-align: right; }
   label, .stMarkdown, .stText, .stCaption { text-align: right !important; }
+
+  /* יישור קבוצות רדיו/צ'קבוקס ורכיבי select/multiselect */
+  .row-widget.stRadio > div, div[role="radiogroup"] { direction: rtl; text-align: right; }
+
+  /* רכיבי הבחירה מבוססי BaseWeb */
+  div[data-baseweb="select"] { direction: rtl; text-align: right; }
+  div[data-baseweb="select"] input { direction: rtl; text-align: right; }
+  ul[role="listbox"] { direction: rtl; text-align: right; }
+
+  /* כפתורי הורדה ואלמנטים נוספים */
+  .stDownloadButton, .stButton { text-align: right; }
 </style>
 """, unsafe_allow_html=True)
 
-CSV_FILE = Path("placements_survey.csv")
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")  # מומלץ לשים ב-secrets בענן
+CSV_FILE = Path("שאלון_שיבוץ.csv")
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")  # מומלץ לשמור ב-secrets בענן
 
 # האם במצב מנהל (כתובת עם ?admin=1)
 is_admin_mode = st.query_params.get("admin", ["0"])[0] == "1"
@@ -38,7 +48,7 @@ def append_row(row: dict, csv_path: Path):
     header = not csv_path.exists()
     df_new.to_csv(csv_path, mode="a", index=False, encoding="utf-8-sig", header=header)
 
-def df_to_excel_bytes(df: pd.DataFrame, sheet: str = "Responses") -> bytes:
+def df_to_excel_bytes(df: pd.DataFrame, sheet: str = "תשובות") -> bytes:
     buf = BytesIO()
     with pd.ExcelWriter(buf, engine="xlsxwriter") as w:
         df.to_excel(w, sheet_name=sheet, index=False)
@@ -57,12 +67,12 @@ def valid_phone(v: str) -> bool:
     return bool(re.match(r"^0\d{1,2}-?\d{6,7}$", v.strip()))
 
 def valid_id(v: str) -> bool:
-    # בדיקת ת"ז ישראלית בסיסית (ספרות בלבד, 5–9 ספרות מקובל; כאן נאכוף 8–9)
+    # בדיקת ת"ז בסיסית: 8–9 ספרות
     return bool(re.match(r"^\d{8,9}$", v.strip()))
 
 def unique_ranks(ranks: dict) -> bool:
     seen = set()
-    for k, v in ranks.items():
+    for _, v in ranks.items():
         if v is None or v == "דלג":
             continue
         if v in seen:
@@ -91,28 +101,34 @@ if is_admin_mode:
                     cols = st.multiselect("בחרי עמודות להצגה", df.columns.tolist(), default=df.columns.tolist())
                     view = df[cols] if cols else df
 
-                    query = st.text_input('סינון (pandas.query) לדוגמה: `מין == "זכר" and שנת_לימודים.str.contains("שנה א")`')
+                    query = st.text_input('סינון (pandas.query), לדוגמה: `מין == "זכר" and שנת_לימודים.str.contains("שנה א")`')
                     if st.button("החילי סינון"):
                         try:
                             view = view.query(query) if query.strip() else view
-                            st.success("סינון הוחל.")
+                            st.success("הסינון הוחל.")
                         except Exception as e:
                             st.error(f"שגיאה בביטוי הסינון: {e}")
 
                     st.dataframe(view, use_container_width=True)
 
-                    st.download_button("📥 הורדת Excel (התצוגה הנוכחית)",
-                                       data=df_to_excel_bytes(view),
-                                       file_name="placements_filtered.xlsx",
-                                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                    st.download_button("📥 הורדת Excel (כל הנתונים)",
-                                       data=df_to_excel_bytes(df),
-                                       file_name="placements_all.xlsx",
-                                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                    st.download_button("📥 הורדת CSV (כל הנתונים)",
-                                       data=df.to_csv(index=False, encoding="utf-8-sig"),
-                                       file_name="placements_all.csv",
-                                       mime="text/csv")
+                    st.download_button(
+                        "📥 הורדת אקסל (התצוגה הנוכחית)",
+                        data=df_to_excel_bytes(view),
+                        file_name="שאלון_שיבוץ_מסונן.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                    st.download_button(
+                        "📥 הורדת אקסל (כל הנתונים)",
+                        data=df_to_excel_bytes(df),
+                        file_name="שאלון_שיבוץ_כללי.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                    st.download_button(
+                        "📥 הורדת CSV (כל הנתונים)",
+                        data=df.to_csv(index=False, encoding="utf-8-sig"),
+                        file_name="שאלון_שיבוץ_כללי.csv",
+                        mime="text/csv"
+                    )
         else:
             st.error("סיסמה שגויה")
     st.stop()
@@ -151,7 +167,8 @@ with tab1:
 
     extra_langs = st.multiselect(
         "ציין/י שפות נוספות שאת/ה דובר/ת (ברמת שיחה), ניתן לסמן יותר מתשובה אחת *",
-        ["עברית", "ערבית", "רוסית", "אמהרית", "אנגלית", "ספרדית", "אחר..."]
+        ["עברית", "ערבית", "רוסית", "אמהרית", "אנגלית", "ספרדית", "אחר..."],
+        placeholder="בחרי שפות נוספות"
     )
     extra_langs_other = ""
     if "אחר..." in extra_langs:
@@ -159,7 +176,7 @@ with tab1:
 
     phone = st.text_input("מספר טלפון נייד * (למשל 050-1234567)")
     address = st.text_input("כתובת מלאה (כולל יישוב) *")
-    email   = st.text_input("כתובת דוא\"ל *")
+    email   = st.text_input("כתובת דוא״ל *")
 
     study_year = st.selectbox("שנת הלימודים *", [
         "תואר ראשון - שנה א'", "תואר ראשון - שנה ב'", "תואר ראשון - שנה ג'",
@@ -196,12 +213,19 @@ with tab2:
         "קהילה", "מוגבלות", "זקנה", "ילדים ונוער", "בריאות הנפש",
         "שיקום", "משפחה", "נשים", "בריאות", "תָקוֹן", "אחר..."
     ]
-    chosen_domains = st.multiselect("בחרו עד 3 תחומים *", all_domains, max_selections=3)
+    chosen_domains = st.multiselect(
+        "בחרו עד 3 תחומים *",
+        all_domains,
+        max_selections=3,
+        placeholder="בחרי עד שלושה תחומים"
+    )
     domains_other = ""
     if "אחר..." in chosen_domains:
         domains_other = st.text_input("פרט/י תחום אחר *")
-    top_domain = st.selectbox("מה התחום הכי מועדף עליך, מבין שלושתם? *",
-                              ["— בחר/י —"] + chosen_domains if chosen_domains else ["— בחר/י —"])
+    top_domain = st.selectbox(
+        "מה התחום הכי מועדף עליך, מבין שלושתם? *",
+        ["— בחר/י —"] + chosen_domains if chosen_domains else ["— בחר/י —"]
+    )
 
     st.markdown("**דרגו את העדפותיכם בין מקומות ההתמחות (1=מועדף ביותר, 10=פחות מועדף). אפשר לדלג.**")
     sites = [
@@ -227,11 +251,19 @@ with tab3:
 with tab4:
     st.subheader("התאמות רפואיות, אישיות וחברתיות")
     st.write("ציינו כל מגבלה/צורך שיש להתחשב בו בתהליך השיבוץ.")
-    adjustments = st.multiselect("סוגי התאמות (ניתן לבחור כמה) *", [
-        "הריון", "מגבלה רפואית (למשל: מחלה כרונית, אוטואימונית)",
-        "רגישות למרחב רפואי (למשל: לא לשיבוץ בבית חולים)", "אלרגיה חמורה",
-        "נכות", "רקע משפחתי רגיש (למשל: בן משפחה עם פגיעה נפשית)", "אחר..."
-    ])
+    adjustments = st.multiselect(
+        "סוגי התאמות (ניתן לבחור כמה) *",
+        [
+            "הריון",
+            "מגבלה רפואית (למשל: מחלה כרונית, אוטואימונית)",
+            "רגישות למרחב רפואי (למשל: לא לשיבוץ בבית חולים)",
+            "אלרגיה חמורה",
+            "נכות",
+            "רקע משפחתי רגיש (למשל: בן משפחה עם פגיעה נפשית)",
+            "אחר..."
+        ],
+        placeholder="בחרי אפשרויות התאמה"
+    )
     adjustments_other = ""
     if "אחר..." in adjustments:
         adjustments_other = st.text_input("פרט/י התאמה אחרת *")
@@ -240,7 +272,7 @@ with tab4:
 # --- סעיף 5 ---
 with tab5:
     st.subheader("מוטיבציה להשתבץ בהכשרה המעשית")
-    st.write("""הערכה תסייע להבין את מידת המחויבות להתנסות, גם אם יידרש מאמץ מיוחד מבחינת נסיעות, שעות או אתגרים מקצועיים.""")
+    st.write("הערכה תסייע להבין את מידת המחויבות להתנסות, גם אם יידרש מאמץ מיוחד מבחינת נסיעות, שעות או אתגרים מקצועיים.")
     likert = ["בכלל לא מסכים/ה", "1", "2", "3", "4", "מסכים/ה מאוד"]
     m1 = st.radio("1) מוכן/ה להשקיע מאמץ נוסף להגיע למקום המועדף *", likert, horizontal=True)
     m2 = st.radio("2) ההכשרה המעשית חשובה לי כהזדמנות משמעותית להתפתחות *", likert, horizontal=True)
@@ -249,7 +281,7 @@ with tab5:
 # --- סעיף 6 ---
 with tab6:
     st.subheader("סיכום ושליחה")
-    st.write("""עברו על הנתונים שמילאתם ואשרו את הצהרת הדיוק.""")
+    st.write("עברו על הנתונים שמילאתם ואשרו את הצהרת הדיוק.")
     confirm = st.checkbox("אני מאשר/ת כי המידע שמסרתי בטופס זה נכון ומדויק, וידוע לי שאין התחייבות להתאמה מלאה לבחירותיי. *")
 
     submitted = st.button("שליחה ✉️")
@@ -257,16 +289,13 @@ with tab6:
 # =========================
 # ולידציה + שמירה
 # =========================
-if 'submit_clicked' not in st.session_state:
+if "submit_clicked" not in st.session_state:
     st.session_state.submit_clicked = False
-
-if 'errors' not in st.session_state:
+if "errors" not in st.session_state:
     st.session_state.errors = []
-
-if 'submitted_ok' not in st.session_state:
+if "submitted_ok" not in st.session_state:
     st.session_state.submitted_ok = False
-
-if 'last_row' not in st.session_state:
+if "last_row" not in st.session_state:
     st.session_state.last_row = None
 
 if submitted:
@@ -282,7 +311,7 @@ if submitted:
         errors.append("סעיף 1: יש לבחור שפות נוספות (ואם נבחר 'אחר', לפרט).")
     if not valid_phone(phone): errors.append("סעיף 1: מספר טלפון אינו תקין.")
     if not address.strip():    errors.append("סעיף 1: יש למלא כתובת מלאה.")
-    if not valid_email(email): errors.append("סעיף 1: כתובת דוא\"ל אינה תקינה.")
+    if not valid_email(email): errors.append("סעיף 1: כתובת דוא״ל אינה תקינה.")
     if study_year == "אחר..." and not study_year_other.strip():
         errors.append("סעיף 1: יש לפרט שנת לימודים (אחר).")
     if not track.strip(): errors.append("סעיף 1: יש למלא מסלול לימודים/תואר.")
@@ -375,8 +404,11 @@ if submitted:
             st.session_state.submitted_ok = True
             st.session_state.last_row = row
             st.success("✅ הטופס נשלח ונשמר בהצלחה!")
-            st.download_button("📥 הורדת תשובה בודדת (CSV)", 
-                               data=pd.DataFrame([row]).to_csv(index=False, encoding="utf-8-sig"),
-                               file_name="my_submission.csv", mime="text/csv")
+            st.download_button(
+                "📥 הורדת תשובה בודדת (CSV)",
+                data=pd.DataFrame([row]).to_csv(index=False, encoding="utf-8-sig"),
+                file_name="תשובה_שלי.csv",
+                mime="text/csv"
+            )
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
