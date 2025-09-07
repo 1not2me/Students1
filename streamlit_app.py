@@ -539,3 +539,84 @@ with tab6:
     st.markdown("---")
     confirm = st.checkbox("אני מאשר/ת כי המידע שמסרתי בטופס זה נכון ומדויק, וידוע לי שאין התחייבות להתאמה מלאה לבחירותיי. *")
     submitted = st.button("שליחה ✉️")
+# =========================
+# ולידציה + שמירה (פועלת פעם אחת כשנלחץ שליחה)
+# =========================
+if submitted:
+    errors=[]
+    # סעיף 1
+    if not first_name.strip(): errors.append("סעיף 1: יש למלא שם פרטי.")
+    if not last_name.strip():  errors.append("סעיף 1: יש למלא שם משפחה.")
+    if not valid_id(nat_id):   errors.append("סעיף 1: ת״ז חייבת להיות 8–9 ספרות.")
+    if mother_tongue=="אחר..." and not other_mt.strip(): errors.append("סעיף 1: יש לציין שפת אם (אחר).")
+    if not extra_langs or ("אחר..." in extra_langs and not extra_langs_other.strip()):
+        errors.append("סעיף 1: יש לבחור שפות נוספות (ואם 'אחר' – לפרט).")
+    if not valid_phone(phone): errors.append("סעיף 1: מספר טלפון אינו תקין.")
+    if not address.strip():    errors.append("סעיף 1: יש למלא כתובת מלאה.")
+    if not valid_email(email): errors.append("סעיף 1: כתובת דוא״ל אינה תקינה.")
+    if study_year=="אחר..." and not study_year_other.strip(): errors.append("סעיף 1: יש לפרט שנת לימודים (אחר).")
+    if not track.strip(): errors.append("סעיף 1: יש למלא מסלול לימודים/תואר.")
+    if mobility=="אחר..." and not mobility_other.strip(): errors.append("סעיף 1: יש לפרט ניידות (אחר).")
+
+    # סעיף 2
+    if prev_training in ["כן","אחר..."]:
+        if not prev_place.strip():  errors.append("סעיף 2: יש למלא מקום/תחום אם הייתה הכשרה קודמת.")
+        if not prev_mentor.strip(): errors.append("סעיף 2: יש למלא שם מדריך ומיקום.")
+        if not prev_partner.strip():errors.append("סעיף 2: יש למלא בן/בת זוג להתמחות.")
+    if not chosen_domains: errors.append("סעיף 2: יש לבחור עד 3 תחומים (לפחות אחד).")
+    if "אחר..." in chosen_domains and not domains_other.strip(): errors.append("סעיף 2: נבחר 'אחר' – יש לפרט תחום.")
+    if chosen_domains and (top_domain not in chosen_domains): errors.append("סעיף 2: יש לבחור תחום מוביל מתוך השלושה.")
+    if not unique_ranks(ranks): errors.append("סעיף 2: לא ניתן להשתמש באותו דירוג ליותר ממוסד אחד.")
+    if not special_request.strip(): errors.append("סעיף 2: יש לציין בקשה מיוחדת (אפשר 'אין').")
+
+    # סעיף 3
+    if avg_grade is None or avg_grade <= 0: errors.append("סעיף 3: יש להזין ממוצע ציונים גדול מ-0.")
+
+    # סעיף 4
+    if not adjustments: errors.append("סעיף 4: יש לבחור לפחות סוג התאמה אחד (או לציין 'אין').")
+    if "אחר..." in adjustments and not adjustments_other.strip(): errors.append("סעיף 4: נבחר 'אחר' – יש לפרט התאמה.")
+    if not adjustments_details.strip(): errors.append("סעיף 4: יש לפרט התייחסות להתאמות (אפשר 'אין').")
+
+    # סעיף 5
+    if not (m1 and m2 and m3): errors.append("סעיף 5: יש לענות על שלוש שאלות המוטיבציה.")
+
+    # סעיף 6
+    if not confirm: errors.append("סעיף 6: יש לאשר את ההצהרה.")
+
+    if errors:
+        show_errors(errors)
+    else:
+        # בניית שורה לשמירה
+        row = {
+            "תאריך_שליחה": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "שם_פרטי": first_name.strip(), "שם_משפחה": last_name.strip(), "תעודת_זהות": nat_id.strip(),
+            "מין": gender, "שיוך_חברתי": social_affil,
+            "שפת_אם": (other_mt.strip() if mother_tongue=="אחר..." else mother_tongue),
+            "שפות_נוספות": "; ".join([x for x in extra_langs if x!="אחר..."] + ([extra_langs_other.strip()] if "אחר..." in extra_langs else [])),
+            "טלפון": phone.strip(), "כתובת": address.strip(), "אימייל": email.strip(),
+            "שנת_לימודים": (study_year_other.strip() if study_year=="אחר..." else study_year),
+            "מסלול_לימודים": track.strip(),
+            "ניידות": (mobility_other.strip() if mobility=="אחר..." else mobility),
+            "הכשרה_קודמת": prev_training,
+            "הכשרה_קודמת_מקום_ותחום": prev_place.strip(),
+            "הכשרה_קודמת_מדריך_ומיקום": prev_mentor.strip(),
+            "הכשרה_קודמת_בן_זוג": prev_partner.strip(),
+            "תחומים_מועדפים": "; ".join([d for d in chosen_domains if d!="אחר..."] + ([domains_other.strip()] if "אחר..." in chosen_domains else [])),
+            "תחום_מוביל": (top_domain if top_domain and top_domain!="— בחר/י —" else ""),
+            "בקשה_מיוחדת": special_request.strip(),
+            "ממוצע": avg_grade,
+            "התאמות": "; ".join([a for a in adjustments if a!="אחר..."] + ([adjustments_other.strip()] if "אחר..." in adjustments else [])),
+            "התאמות_פרטים": adjustments_details.strip(),
+            "מוטיבציה_1": m1, "מוטיבציה_2": m2, "מוטיבציה_3": m3,
+        }
+        # דירוגים
+        row.update({f"דירוג_{k}": v for k,v in ranks.items()})
+
+        try:
+            append_row(row, CSV_FILE)
+            st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
+            st.download_button("📥 הורדת תשובה (CSV)",
+                               data=pd.DataFrame([row]).to_csv(index=False, encoding="utf-8-sig"),
+                               file_name="תשובה_בודדת.csv", mime="text/csv")
+        except Exception as e:
+            st.error(f"❌ שמירה נכשלה: {e}")
