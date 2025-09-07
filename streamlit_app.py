@@ -1,648 +1,228 @@
-# app.py
-import json
-import uuid
-import re
-from io import BytesIO
-from pathlib import Path
-from datetime import datetime
-
-import pandas as pd
 import streamlit as st
-
-
-# =========================
-# הגדרות כלליות
-# =========================
-st.set_page_config(page_title="שאלון שיבוץ סטודנטים – תשפ״ו", layout="centered")
-
-# --- פונקציית הצגת שגיאות (טקסט בלבד) ---
-def show_errors(errors: list[str]):
-    """מציג הודעות שגיאה קצרות ונקיות – ללא הדפסות קוד/אובייקטים."""
-    if not errors:
-        return
-    st.markdown(
-        "<div style='color:#b91c1c; font-weight:700; font-size:20px; margin:.25rem 0 .35rem;'>נמצאו שגיאות:</div>"
-        + "<ul style='margin-top:0; padding-right:1.2rem; color:#b91c1c; line-height:1.9;'>"
-        + "".join([f"<li>{e}</li>" for e in errors])
-        + "</ul>",
-        unsafe_allow_html=True,
-    )
-
+import pandas as pd
+import uuid
+from datetime import datetime
+from pathlib import Path
+from io import BytesIO
 
 # =========================
-# שכבת התמדה (Persistence) — מצב נשמר לדיסק לכל Session
+# הגדרות
 # =========================
-# מזהה Session יציב (בתוך אותו דפדפן/כרטיסייה) – נשמר ב-session_state
-if "sid" not in st.session_state:
-    st.session_state.sid = uuid.uuid4().hex
+st.set_page_config(page_title="שאלון", page_icon="📝", layout="centered")
 
-STATE_FILE = Path(f".state_{st.session_state.sid}.json")
-
-def _load_state_file() -> dict:
-    if STATE_FILE.exists():
-        try:
-            return json.loads(STATE_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            return {}
-    return {}
-
-def _save_state_file():
-    try:
-        STATE_FILE.write_text(json.dumps(dict(st.session_state), ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass  # לא נכשלים בגלל שמירה
-
-def preload_state_keys(keys_with_defaults: dict):
-    """מטעין ערכים מהקובץ ל-session_state אם עדיין לא קיימים."""
-    saved = _load_state_file()
-    for k, default in keys_with_defaults.items():
-        if k not in st.session_state:
-            st.session_state[k] = saved.get(k, default)
-
-def autosave():
-    """שומר אוטומטית בכל רינדור."""
-    _save_state_file()
-
-
-# =========================
-# עיצוב (פונטים/RTL/גרדיאנטים) + הסתרת 'Press Enter to apply'
-# =========================
+# כיוון מימין לשמאל + יישור לימין (כולל קבוצות רדיו/צ'קבוקסים)
 st.markdown("""
 <style>
-@font-face { font-family:'David'; src:url('https://example.com/David.ttf') format('truetype'); }
-html, body, [class*="css"] { font-family:'David',sans-serif!important; }
-
-/* ====== עיצוב מודרני + RTL ====== */
-:root{
-  --bg-1:#e0f7fa; --bg-2:#ede7f6; --bg-3:#fff3e0; --bg-4:#fce4ec; --bg-5:#e8f5e9;
-  --ink:#0f172a; --primary:#9b5de5; --primary-700:#f15bb5; --ring:rgba(155,93,229,.35);
-
-  --field-bg:#faf5ff; --field-bg-hover:#f3e8ff; --field-border:#d0bdf4;
-  --field-border-strong:#b892ff; --field-ink:#2d1656; --field-shadow:rgba(123,31,162,.08);
-  --ring2:rgba(155,93,229,.28);
-}
-[data-testid="stAppViewContainer"]{
-  background:
-    radial-gradient(1200px 600px at 15% 10%, var(--bg-2) 0%, transparent 70%),
-    radial-gradient(1000px 700px at 85% 20%, var(--bg-3) 0%, transparent 70%),
-    radial-gradient(900px 500px at 50% 80%, var(--bg-4) 0%, transparent 70%),
-    radial-gradient(700px 400px at 10% 85%, var(--bg-5) 0%, transparent 70%),
-    linear-gradient(135deg, var(--bg-1) 0%, #ffffff 100%) !important;
-  color: var(--ink);
-}
-.main .block-container{
-  background: rgba(255,255,255,.78);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(15,23,42,.08);
-  box-shadow: 0 15px 35px rgba(15,23,42,.08);
-  border-radius: 24px;
-  padding: 2rem 2rem 2.5rem;
-}
-h1,h2,h3,.stMarkdown h1,.stMarkdown h2{ letter-spacing:.5px; text-shadow:0 1px 2px rgba(255,255,255,.7); font-weight:700; }
-
-/* כפתורים */
-.stButton > button{
-  background:linear-gradient(135deg,var(--primary) 0%,var(--primary-700) 100%)!important;
-  color:#fff!important; border:none!important; border-radius:16px!important;
-  padding:.75rem 1.3rem!important; font-size:1rem!important; font-weight:600!important;
-  box-shadow:0 6px 16px var(--ring)!important; transition:all .15s ease!important;
-}
-.stButton > button:hover{ transform:translateY(-2px) scale(1.01); filter:brightness(1.08); }
-.stButton > button:focus{ outline:none!important; box-shadow:0 0 0 4px var(--ring)!important; }
-
-/* תבנית אחידה לשדות */
-.field-like{
-  background:var(--field-bg)!important;
-  border:1.5px solid var(--field-border)!important;
-  border-radius:14px!important;
-  box-shadow:0 2px 8px var(--field-shadow)!important;
-  color:var(--field-ink)!important;
-  min-height:56px!important;
-  transition:background .2s, border-color .2s, box-shadow .2s!important;
-}
-.field-like:hover{
-  background:var(--field-bg-hover)!important;
-  border-color:var(--field-border-strong)!important;
-  box-shadow:0 4px 12px rgba(123,31,162,.15)!important;
-}
-.field-like:focus-within{
-  outline:none!important; border-color:var(--field-border-strong)!important;
-  box-shadow:0 0 0 4px var(--ring2), 0 4px 12px rgba(123,31,162,.15)!important;
-}
-
-/* SELECT / MULTISELECT */
-div.stSelectbox > div > div, div.stMultiSelect > div > div{ composes: field-like; padding:0!important; }
-div[data-baseweb="select"] > div{
-  composes: field-like;
-  padding-inline-start:1rem!important; padding-inline-end:2.8rem!important;
-  height:56px!important; min-height:56px!important; display:flex; align-items:center;
-  background:transparent!important; box-shadow:none!important; border:none!important;
-}
-div[data-baseweb="select"] [class*="indicatorSeparator"]{ display:none!important; }
-div[data-baseweb="select"] svg{ color:#5b21b6!important; inset-inline-end:.7rem!important; inset-inline-start:auto!important; }
-div[data-baseweb="select"] [class*="ValueContainer"],
-div[data-baseweb="select"] [class*="SingleValue"],
-div[data-baseweb="select"] [class*="placeholder"]{
-  color:var(--field-ink)!important; font-weight:500; max-width:calc(100% - .25rem)!important;
-  overflow:hidden!important; white-space:nowrap!important; text-overflow:ellipsis!important; font-size:1.02rem!important;
-}
-
-/* TEXT INPUT */
-.stTextInput > div > div{ composes: field-like; padding:0!important; }
-.stTextInput input{
-  background:transparent!important; border:none!important; box-shadow:none!important;
-  color:var(--field-ink)!important; font-size:1.02rem!important;
-  height:56px!important; padding-inline:1rem!important;
-}
-.stTextInput input::placeholder{ color:#5a5a5a!important; opacity:1!important; }
-
-/* NUMBER INPUT */
-.stNumberInput > div > div{ composes: field-like; padding:0!important; }
-.stNumberInput input{
-  background:transparent!important; border:none!important; box-shadow:none!important;
-  color:var(--field-ink)!important; font-size:1.02rem!important;
-  height:56px!important; padding-inline:1rem!important;
-}
-
-/* TEXT AREA */
-.stTextArea > div > div{ composes: field-like; min-height:120px!important; padding:.6rem .9rem!important; }
-.stTextArea textarea{
-  background:transparent!important; border:none!important; box-shadow:none!important;
-  color:var(--field-ink)!important; font-size:1.02rem!important;
-}
-
-/* DATE INPUT */
-.stDateInput > div > div{ composes: field-like; padding:0!important; }
-.stDateInput input{
-  background:transparent!important; border:none!important; box-shadow:none!important;
-  color:var(--field-ink)!important; font-size:1.02rem!important;
-  height:56px!important; padding-inline:1rem!important;
-}
-
-/* מרווח אחיד */
-div.stSelectbox, div.stMultiSelect, .stTextInput, .stNumberInput, .stTextArea, .stDateInput{ margin-bottom: .9rem; }
-
-/* RTL */
-.stApp,.main,[data-testid="stSidebar"]{ direction:rtl; text-align:right; }
-label,.stMarkdown,.stText,.stCaption{ text-align:right!important; }
-div[role="radiogroup"]{ direction:rtl; text-align:right; }
-ul[role="listbox"]{ direction:rtl!important; text-align:right!important; }
-ul[role="listbox"] [role="option"] > div{ text-align:right!important; }
-
-/* הסתרת "Press Enter to apply" אם קיים */
-[data-testid="stInputInstructions"],
-[data-testid="stTextInputInstructions"],
-small.enter-to-apply { display: none !important; }
+  .stApp, .main, [data-testid="stSidebar"] { direction: rtl; text-align: right; }
+  label, .stMarkdown, .stText, .stCaption, .st-emotion-cache-1y4p8pa { text-align: right; }
+  div[role="radiogroup"], div[data-baseweb="select"] { direction: rtl; text-align: right; }
+  .row-widget.stRadio > div { direction: rtl; }
+  .st-emotion-cache-1dp5vir { text-align: right; } /* טקסט עזרה */
 </style>
-<script>
-(function(){
-  function hideEnterHints(){
-    const needles = ['press enter to apply','press enter to apply.'];
-    document.querySelectorAll('div,span,p,small').forEach(el=>{
-      const t = (el.textContent||'').trim().toLowerCase();
-      if (needles.includes(t)) el.style.display='none';
-    });
-  }
-  const obs = new MutationObserver(hideEnterHints);
-  obs.observe(document.body, { childList:true, subtree:true });
-  hideEnterHints();
-})();
-</script>
 """, unsafe_allow_html=True)
 
+# מיקום קובץ התשובות
+RESPONSES_CSV = Path("responses.csv")
+
+# סיסמת מנהל (לבדיקות מקומי). לפרודקשן – ממליץ לשים ב-st.secrets["ADMIN_PASSWORD"]
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "1234")
 
 # =========================
-# קבועים לקבצים
+# סכימת שאלות (החליפי לשאלון שלך)
+# type נתמכים: text, textarea, number, radio, checkbox, multiselect, select, slider, date, time, file
 # =========================
-CSV_FILE = Path("שאלון_שיבוץ.csv")
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")
-is_admin_mode = st.query_params.get("admin", ["0"])[0] == "1"
-
+FORM_SCHEMA = [
+    {"id": "full_name", "label": "שם מלא", "type": "text", "required": True, "placeholder": "רואן סעב"},
+    {"id": "email", "label": "אימייל", "type": "text", "required": True,
+     "validators": {"regex": r"^[^\s@]+@[^\s@]+\.[^\s@]+$", "message": "כתובת אימייל לא תקינה."}},
+    {"id": "track", "label": "מסלול מועדף", "type": "radio", "required": True,
+     "options": ["תוכנה", "מידע רפואי", "לא החלטתי עדיין"]},
+    {"id": "skills", "label": "מיומנויות (אפשר לבחור כמה)", "type": "multiselect", "options": ["Python","Java","Excel","SQL","מנהיגות","הנחיית קבוצות"]},
+    {"id": "motivation", "label": "מה המוטיבציה שלך להצטרף? (עד 600 תווים)", "type": "textarea", "required": True, "max_chars": 600},
+    {"id": "availability", "label": "זמינות יומית משוערת (שעות)", "type": "slider", "required": True, "min_value": 0, "max_value": 10, "value": 2},
+    {"id": "agree", "label": "אני מאשר/ת שימוש במידע לצורכי שיבוץ", "type": "checkbox", "required": True},
+]
 
 # =========================
-# פונקציות עזר לטופס
+# פונקציות עזר
 # =========================
-def load_df(path: Path) -> pd.DataFrame:
-    return pd.read_csv(path, encoding="utf-8-sig") if path.exists() else pd.DataFrame()
+def render_field(q):
+    t = q["type"]
+    label = q["label"]
+    key = q["id"]
+    help_txt = q.get("help")
 
-def append_row(row: dict, path: Path):
+    if t == "text":
+        return st.text_input(label, key=key, placeholder=q.get("placeholder",""), help=help_txt)
+    if t == "textarea":
+        return st.text_area(label, key=key, max_chars=q.get("max_chars"), height=q.get("height",140), help=help_txt)
+    if t == "number":
+        return st.number_input(label, key=key, min_value=q.get("min_value"), max_value=q.get("max_value"),
+                               step=q.get("step",1), help=help_txt)
+    if t == "radio":
+        return st.radio(label, options=q.get("options",[]), key=key, help=help_txt)
+    if t == "select":
+        return st.selectbox(label, options=q.get("options",[]), key=key, help=help_txt)
+    if t == "multiselect":
+        return st.multiselect(label, options=q.get("options",[]), key=key, help=help_txt)
+    if t == "checkbox":
+        return st.checkbox(label, key=key, help=help_txt)
+    if t == "slider":
+        return st.slider(label, min_value=q.get("min_value",0), max_value=q.get("max_value",10),
+                         value=q.get("value",0), step=q.get("step",1), key=key, help=help_txt)
+    if t == "date":
+        return st.date_input(label, key=key, help=help_txt)
+    if t == "time":
+        return st.time_input(label, key=key, help=help_txt)
+    if t == "file":
+        return st.file_uploader(label, type=q.get("type_filter"), accept_multiple_files=q.get("accept_multiple_files", False),
+                                key=key, help=help_txt)
+
+    st.warning(f"סוג שדה לא נתמך: {t}")
+    return None
+
+def validate_required(q, value):
+    if q.get("required", False):
+        if q["type"] == "checkbox" and value is not True:
+            return False, "יש לסמן את התיבה."
+        if q["type"] == "multiselect" and (not value):
+            return False, "יש לבחור לפחות אפשרות אחת."
+        if q["type"] == "file" and (value is None or (isinstance(value, list) and len(value)==0)):
+            return False, "יש להעלות קובץ."
+        if q["type"] not in ("checkbox","multiselect","file"):
+            if value is None or (isinstance(value,str) and value.strip()==""):
+                return False, "שדה זה הוא חובה."
+    # בדיקות Regex
+    validators = q.get("validators")
+    if validators and validators.get("regex") and isinstance(value, str):
+        import re
+        if not re.match(validators["regex"], value.strip()):
+            return False, validators.get("message","הערך אינו תקין.")
+    return True, None
+
+def normalize_value_for_csv(v):
+    if isinstance(v, list):
+        return "; ".join(map(str, v))
+    if hasattr(v, "name"):  # קבצים – נשמור רק את שם הקובץ
+        return v.name
+    return v
+
+def append_row_to_csv(row: dict, csv_path: Path):
     df_new = pd.DataFrame([row])
-    df_new.to_csv(path, mode="a", index=False, encoding="utf-8-sig", header=not path.exists())
+    header = not csv_path.exists()
+    df_new.to_csv(csv_path, mode="a", index=False, encoding="utf-8-sig", header=header)
 
-def _pick_excel_engine() -> str | None:
-    try:
-        import xlsxwriter  # noqa
-        return "xlsxwriter"
-    except Exception:
-        try:
-            import openpyxl  # noqa
-            return "openpyxl"
-        except Exception:
-            return None
-
-def df_to_excel_bytes(df: pd.DataFrame, sheet: str = "תשובות") -> bytes:
-    engine = _pick_excel_engine()
-    if engine is None:
-        st.markdown("<div style='color:#b91c1c'>לא נמצא מנוע לייצוא Excel. הוסיפו ל־requirements.txt: <b>xlsxwriter</b> או <b>openpyxl</b>.</div>", unsafe_allow_html=True)
-        return b""
+def dataframe_to_excel_bytes(df: pd.DataFrame) -> bytes:
     buf = BytesIO()
-    with pd.ExcelWriter(buf, engine=engine) as w:
-        df.to_excel(w, sheet_name=sheet, index=False)
-        if engine == "xlsxwriter":
-            ws = w.sheets[sheet]
-            for i, c in enumerate(df.columns):
-                width = min(60, max(12, int(df[c].astype(str).map(len).max() if not df.empty else 12) + 4))
-                ws.set_column(i, i, width)
+    with pd.ExcelWriter(buf, engine="xlsxwriter") as writer:
+        df.to_excel(writer, sheet_name="Responses", index=False)
+        # עיצוב בסיסי
+        workbook  = writer.book
+        worksheet = writer.sheets["Responses"]
+        for i, col in enumerate(df.columns):
+            col_width = max(12, min(60, int(df[col].astype(str).map(len).max() if not df.empty else 12) + 4))
+            worksheet.set_column(i, i, col_width)
     buf.seek(0)
     return buf.read()
 
-def valid_email(v: str) -> bool: return bool(re.match(r"^[^@]+@[^@]+\.[^@]+$", v.strip()))
-def valid_phone(v: str) -> bool: return bool(re.match(r"^0\d{1,2}-?\d{6,7}$", v.strip()))
-def valid_id(v: str) -> bool:    return bool(re.match(r"^\d{8,9}$", v.strip()))
+# =========================
+# ניווט
+# =========================
+page = st.sidebar.radio("ניווט", ["מילוי טופס", "מנהל 🔐"], index=0)
 
-def unique_ranks(r: dict) -> bool:
-    seen=set()
-    for v in r.values():
-        if v in (None, "דלג"): continue
-        if v in seen: return False
-        seen.add(v)
-    return True
+# =========================
+# עמוד מילוי טופס
+# =========================
+if page == "מילוי טופס":
+    st.title("📝 שאלון")
+    st.caption("מוכן ל-RTL, שמירת תשובות ל-CSV והפקת Excel בעמוד המנהל.")
 
+    with st.form("survey_form", clear_on_submit=False):
+        values = {}
+        for q in FORM_SCHEMA:
+            values[q["id"]] = render_field(q)
+        submitted = st.form_submit_button("שליחה")
+
+    if submitted:
+        # בדיקות חובה
+        errors = {}
+        for q in FORM_SCHEMA:
+            ok, msg = validate_required(q, values[q["id"]])
+            if not ok:
+                errors[q["id"]] = msg
+
+        if errors:
+            st.error("יש שגיאות בטופס. נא לתקן ולנסות שוב.")
+            for q in FORM_SCHEMA:
+                if q["id"] in errors:
+                    st.markdown(f"**{q['label']}**: :red[{errors[q['id']]}]")
+        else:
+            row = {"_response_id": str(uuid.uuid4()), "_submitted_at": datetime.now().isoformat(timespec="seconds")}
+            for q in FORM_SCHEMA:
+                row[q["id"]] = normalize_value_for_csv(values[q["id"]])
+
+            try:
+                append_row_to_csv(row, RESPONSES_CSV)
+                st.success("התשובה נשמרה בהצלחה! 🎉")
+                # הורדה של שורת התשובה (CSV)
+                st.download_button(
+                    "הורדת שורת התשובה (CSV)",
+                    data=pd.DataFrame([row]).to_csv(index=False, encoding="utf-8-sig"),
+                    file_name=f"response_{row['_response_id']}.csv",
+                    mime="text/csv"
+                )
+            except Exception as e:
+                st.error(f"נכשלה שמירת התשובה: {e}")
 
 # =========================
 # עמוד מנהל
 # =========================
-if is_admin_mode:
-    st.title("🔑 גישת מנהל – צפייה והורדת Excel")
+if page == "מנהל 🔐":
+    st.title("ממשק מנהל")
+    st.caption("צפייה בנתוני המועמדים והורדה ל-Excel. (שימי לב: זו אינה אבטחה חזקה—לפרודקשן השתמשי ב-st.secrets או ב-Auth מאובטח)")
 
-    # כפתור איפוס טופס (מחק קובץ מצב + session_state חוץ מ-sid)
-    with st.expander("כלי תחזוקה", expanded=False):
-        if st.button("🧹 איפוס טופס למצב התחלתי (מחק מצב שמור)"):
-            STATE_FILE.unlink(missing_ok=True)
-            for k in list(st.session_state.keys()):
-                if k not in ("sid",):
-                    del st.session_state[k]
-            st.session_state.step = 1
-            st.rerun()
+    # אימות בסיסי
+    pwd = st.text_input("סיסמה", type="password", help="ברירת מחדל לדוגמה בקוד: 1234 (מומלץ להגדיר ב-st.secrets).")
+    if st.button("כניסה"):
+        st.session_state["_is_admin"] = (pwd == ADMIN_PASSWORD)
 
-    pwd = st.text_input("סיסמת מנהל:", type="password", key="admin_pwd")
-    if pwd:
-        if pwd == ADMIN_PASSWORD:
-            st.success("התחברת בהצלחה ✅")
-            df = load_df(CSV_FILE)
-            if df.empty:
-                st.info("אין עדיין נתונים.")
-            else:
-                st.dataframe(df, use_container_width=True)
-                xls = df_to_excel_bytes(df)
-                if xls:
-                    st.download_button("📥 הורדת אקסל (כל הנתונים)",
-                                       data=xls,
-                                       file_name="שאלון_שיבוץ_כל_הנתונים.xlsx",
-                                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    if st.session_state.get("_is_admin", False):
+        if RESPONSES_CSV.exists():
+            df = pd.read_csv(RESPONSES_CSV)
+            st.subheader("טבלת נתונים")
+            st.dataframe(df, use_container_width=True)
+
+            # סינון מהיר
+            with st.expander("סינון חכם"):
+                cols = st.multiselect("בחרי עמודות להצגה", df.columns.tolist(), default=df.columns.tolist())
+                df_view = df[cols] if cols else df
+                query = st.text_input("סינון טקסטואלי (שאילתת pandas.query, אופציונלי). דוגמה: track == 'תוכנה'")
+                if st.button("החילי סינון"):
+                    try:
+                        df_view = df_view.query(query) if query.strip() else df_view
+                        st.success("סינון הוחל.")
+                    except Exception as e:
+                        st.error(f"שגיאה בביטוי הסינון: {e}")
+                st.dataframe(df_view, use_container_width=True)
+
+                # הורדת Excel לפי התצוגה המסוננת
+                excel_bytes = dataframe_to_excel_bytes(df_view)
+                st.download_button(
+                    "הורדת Excel (התצוגה הנוכחית)",
+                    data=excel_bytes,
+                    file_name="responses.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+            # הורדת כל הנתונים כפי שהם
+            excel_all = dataframe_to_excel_bytes(df)
+            st.download_button(
+                "הורדת Excel (כל הנתונים)",
+                data=excel_all,
+                file_name="responses_all.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
         else:
-            st.markdown("<div style='color:#b91c1c'>סיסמה שגויה</div>", unsafe_allow_html=True)
-    st.stop()
-
-
-# =========================
-# טעינת מצב שמור מראש + ערכי ברירת מחדל
-# =========================
-preload_state_keys({
-    "step": 1,
-    # סעיף 1
-    "first_name": "", "last_name": "", "nat_id": "", "gender": "זכר",
-    "social_affil": "יהודי/ה", "mother_tongue": "עברית", "other_mt": "",
-    "extra_langs": [], "extra_langs_other": "",
-    "phone": "", "address": "", "email": "",
-    "study_year": "תואר ראשון - שנה א'", "study_year_other": "", "track": "",
-    "mobility": "אוכל להגיע בתחבורה ציבורית", "mobility_other": "",
-    "confirm1": False,
-    # סעיף 2
-    "prev_training": "לא", "prev_place": "", "prev_mentor": "", "prev_partner": "",
-    "chosen_domains": [], "domains_other": "", "top_domain_select": "— בחר/י —",
-    "special_request": "", "confirm2": False,
-    # דירוגים
-    **{f"rank_{i}": "דלג" for i in range(10)},
-    # סעיף 3
-    "avg_grade": 0.0, "confirm3": False,
-    # סעיף 4
-    "adjustments": [], "adjustments_other": "", "adjustments_details": "", "confirm4": False,
-    # סעיף 5
-    "m1": "", "m2": "", "m3": "", "confirm5": False,
-    # סעיף 6
-    "confirm_final": False,
-})
-
-# שמירת מצב בכל רינדור
-autosave()
-
-
-# =========================
-# אשף 6 סעיפים
-# =========================
-st.title("📋 שאלון שיבוץ סטודנטים – שנת הכשרה תשפ״ו")
-st.caption("התמיכה בקוראי מסך הופעלה.")
-
-def nav_buttons(show_back=True, proceed_label="המשך לסעיף הבא"):
-    c1, c2 = st.columns([1,1])
-    back = c1.button("חזרה", use_container_width=True) if show_back else False  # בלי חץ
-    nxt  = c2.button(proceed_label, use_container_width=True)
-    return back, nxt
-
-# --- סעיף 1 ---
-if st.session_state.step == 1:
-    st.subheader("סעיף 1 מתוך 6 – פרטים אישיים של הסטודנט/ית")
-
-    st.text_input("שם פרטי *", key="first_name")
-    st.text_input("שם משפחה *", key="last_name")
-    st.text_input("מספר תעודת זהות *", key="nat_id")
-
-    st.radio("מין *", ["זכר","נקבה"], horizontal=True, key="gender")
-    st.selectbox("שיוך חברתי *", ["יהודי/ה","מוסלמי/ת","נוצרי/ה","דרוזי/ת"], key="social_affil")
-
-    st.selectbox("שפת אם *", ["עברית","ערבית","רוסית","אחר..."], key="mother_tongue")
-    if st.session_state.mother_tongue == "אחר...":
-        st.text_input("ציין/י שפת אם אחרת *", key="other_mt")
+            st.info("עדיין אין נתונים. קובץ responses.csv לא נמצא.")
     else:
-        st.session_state.other_mt = ""
-
-    st.multiselect("ציין/י שפות נוספות (ברמת שיחה)",  # אופציונלי
-                   ["עברית","ערבית","רוסית","אמהרית","אנגלית","ספרדית","אחר..."],
-                   key="extra_langs", placeholder="בחרי שפות נוספות")
-    if "אחר..." in st.session_state.extra_langs:
-        st.text_input("ציין/י שפה נוספת (אחר) *", key="extra_langs_other")
-    else:
-        st.session_state.extra_langs_other = ""
-
-    st.text_input("מספר טלפון נייד * (לדוגמה 050-1234567)", key="phone")
-    st.text_input("כתובת מלאה (כולל יישוב) *", key="address")
-    st.text_input("כתובת דוא״ל *", key="email")
-
-    st.selectbox("שנת הלימודים *",
-                 ["תואר ראשון - שנה א'","תואר ראשון - שנה ב'","תואר ראשון - שנה ג'","הסבה א'","הסבה ב'","אחר..."],
-                 key="study_year")
-    if st.session_state.study_year == "אחר...":
-        st.text_input("ציין/י שנה/מסלול אחר *", key="study_year_other")
-    else:
-        st.session_state.study_year_other = ""
-
-    st.text_input("מסלול לימודים / תואר *", key="track")
-
-    st.selectbox("אופן ההגעה להתמחות (ניידות) *",
-                 ["אוכל להיעזר ברכב / ברשותי רכב","אוכל להגיע בתחבורה ציבורית","אחר..."],
-                 key="mobility")
-    if st.session_state.mobility == "אחר...":
-        st.text_input("פרט/י אחר לגבי ניידות *", key="mobility_other")
-    else:
-        st.session_state.mobility_other = ""
-
-    st.checkbox("אני מאשר/ת את המידע בסעיף 1 ומעונ/ה להמשיך", key="confirm1")
-    _, nxt = nav_buttons(False)
-
-    if nxt:
-        errors=[]
-        if not st.session_state.first_name.strip(): errors.append("יש למלא שם פרטי.")
-        if not st.session_state.last_name.strip():  errors.append("יש למלא שם משפחה.")
-        if not valid_id(st.session_state.nat_id):   errors.append("ת״ז חייבת להיות 8–9 ספרות.")
-        if st.session_state.mother_tongue=="אחר..." and not st.session_state.other_mt.strip():
-            errors.append("יש לציין שפת אם (אחר).")
-        if "אחר..." in st.session_state.extra_langs and not st.session_state.extra_langs_other.strip():
-            errors.append("נבחר 'אחר' בשפות נוספות – יש לפרט.")
-        if not valid_phone(st.session_state.phone): errors.append("מספר טלפון אינו תקין.")
-        if not st.session_state.address.strip():    errors.append("יש למלא כתובת מלאה.")
-        if not valid_email(st.session_state.email): errors.append("כתובת דוא״ל אינה תקינה.")
-        if st.session_state.study_year=="אחר..." and not st.session_state.study_year_other.strip():
-            errors.append("יש לפרט שנת לימודים (אחר).")
-        if not st.session_state.track.strip(): errors.append("יש למלא מסלול לימודים/תואר.")
-        if st.session_state.mobility=="אחר..." and not st.session_state.mobility_other.strip():
-            errors.append("יש לפרט ניידות (אחר).")
-        if not st.session_state.confirm1: errors.append("יש לאשר את סעיף 1 כדי להמשיך.")
-        show_errors(errors)
-        if not errors:
-            st.session_state.step=2
-            autosave()
-            st.rerun()
-
-# --- סעיף 2 ---
-if st.session_state.step == 2:
-    st.subheader("סעיף 2 מתוך 6 – העדפת שיבוץ")
-
-    st.selectbox("האם עברת הכשרה מעשית בשנה קודמת? *", ["כן","לא","אחר..."], key="prev_training")
-    if st.session_state.prev_training in ["כן","אחר..."]:
-        st.text_input("אם כן, נא ציין שם מקום ותחום ההתמחות *", key="prev_place")
-        st.text_input("שם המדריך והמיקום הגיאוגרפי של ההכשרה *", key="prev_mentor")
-        st.text_input("בן/בת הזוג להתמחות בשנה הקודמת *", key="prev_partner")
-    else:
-        st.session_state.prev_place  = ""
-        st.session_state.prev_mentor = ""
-        st.session_state.prev_partner= ""
-
-    all_domains=["קהילה","מוגבלות","זקנה","ילדים ונוער","בריאות הנפש","שיקום","משפחה","נשים","בריאות","תָקוֹן","אחר..."]
-    st.multiselect("בחרו עד 3 תחומים *", all_domains, max_selections=3,
-                   placeholder="בחרי עד שלושה תחומים", key="chosen_domains")
-
-    if "אחר..." in st.session_state.chosen_domains:
-        st.text_input("פרט/י תחום אחר *", key="domains_other")
-    else:
-        st.session_state.domains_other = ""
-
-    # בחירת תחום מוביל מתוך השלושה
-    options = ["— בחר/י —"] + st.session_state.chosen_domains if st.session_state.chosen_domains else ["— בחר/י —"]
-    st.selectbox("מה התחום הכי מועדף עליך, מבין שלושתם? *", options, key="top_domain_select")
-
-    st.markdown("**דרגו את העדפותיכם (1=מועדף ביותר, 10=פחות מועדף). אפשר לדלג.**")
-    sites=["בית חולים זיו","שירותי רווחה קריית שמונה","מרכז יום לגיל השלישי","מועדונית נוער בצפת","אתר 5","אתר 6","אתר 7","אתר 8","אתר 9","אתר 10"]
-    rank_options=["דלג"]+[str(i) for i in range(1,11)]
-    ranks={}
-    cols = st.columns(2)
-    for i, s in enumerate(sites):
-        with cols[i%2]:
-            key=f"rank_{i}"
-            st.selectbox(f"דירוג – {s}", rank_options, key=key)
-            ranks[s]=st.session_state[key]
-
-    st.text_area("האם קיימת בקשה מיוחדת הקשורה למיקום או תחום ההתמחות?", height=100, key="special_request")
-    st.checkbox("אני מאשר/ת את המידע בסעיף 2 ומעונ/ה להמשיך", key="confirm2")
-
-    back, nxt = nav_buttons(True)
-    if back:
-        st.session_state.step=1
-        autosave()
-        st.rerun()
-
-    if nxt:
-        errors=[]
-        if st.session_state.prev_training in ["כן","אחר..."]:
-            if not st.session_state.prev_place.strip():  errors.append("יש למלא מקום/תחום אם הייתה הכשרה קודמת.")
-            if not st.session_state.prev_mentor.strip(): errors.append("יש למלא שם מדריך ומיקום.")
-            if not st.session_state.prev_partner.strip():errors.append("יש למלא בן/בת זוג.")
-        if not st.session_state.chosen_domains: errors.append("יש לבחור לפחות תחום אחד (עד 3).")
-        if "אחר..." in st.session_state.chosen_domains and not st.session_state.domains_other.strip():
-            errors.append("נבחר 'אחר' – יש לפרט תחום.")
-        if st.session_state.chosen_domains and (st.session_state.top_domain_select not in st.session_state.chosen_domains):
-            errors.append("בחר/י תחום מוביל מתוך השלושה.")
-        if not unique_ranks(ranks): errors.append("לא ניתן להשתמש באותו דירוג ליותר ממוסד אחד.")
-        if not st.session_state.confirm2: errors.append("יש לאשר את סעיף 2 כדי להמשיך.")
-        show_errors(errors)
-        if not errors:
-            st.session_state.ranks=ranks
-            st.session_state.step=3
-            autosave()
-            st.rerun()
-
-# --- סעיף 3 ---
-if st.session_state.step == 3:
-    st.subheader("סעיף 3 מתוך 6 – נתונים אקדמיים")
-    st.number_input("ממוצע ציונים *", min_value=0.0, max_value=100.0, step=0.1, key="avg_grade")
-    st.checkbox("אני מאשר/ת את המידע בסעיף 3 ומעונ/ה להמשיך", key="confirm3")
-    back, nxt = nav_buttons(True)
-    if back:
-        st.session_state.step=2
-        autosave()
-        st.rerun()
-    if nxt:
-        errors=[]
-        if st.session_state.avg_grade is None or st.session_state.avg_grade<=0: errors.append("יש להזין ממוצע ציונים גדול מ-0.")
-        if not st.session_state.confirm3: errors.append("יש לאשר את סעיף 3 כדי להמשיך.")
-        show_errors(errors)
-        if not errors:
-            st.session_state.step=4
-            autosave()
-            st.rerun()
-
-# --- סעיף 4 ---
-if st.session_state.step == 4:
-    st.subheader("סעיף 4 מתוך 6 – התאמות רפואיות, אישיות וחברתיות")
-
-    st.multiselect("סוגי התאמות (ניתן לבחור כמה) *",
-                   ["הריון","מגבלה רפואית (למשל: מחלה כרונית, אוטואימונית)",
-                    "רגישות למרחב רפואי (למשל: לא לשיבוץ בבית חולים)","אלרגיה חמורה",
-                    "נכות","רקע משפחתי רגיש (למשל: בן משפחה עם פגיעה נפשית)","אחר..."],
-                   key="adjustments", placeholder="בחרי אפשרויות התאמה")
-
-    if "אחר..." in st.session_state.adjustments:
-        st.text_input("פרט/י התאמה אחרת *", key="adjustments_other")
-    else:
-        st.session_state.adjustments_other = ""
-
-    st.text_area("פרט: *", height=100, key="adjustments_details")
-    st.checkbox("אני מאשר/ת את המידע בסעיף 4 ומעונ/ה להמשיך", key="confirm4")
-    back, nxt = nav_buttons(True)
-    if back:
-        st.session_state.step=3
-        autosave()
-        st.rerun()
-    if nxt:
-        errors=[]
-        if not st.session_state.adjustments: errors.append("יש לבחור לפחות סוג התאמה אחד (או לציין 'אין').")
-        if "אחר..." in st.session_state.adjustments and not st.session_state.adjustments_other.strip():
-            errors.append("נבחר 'אחר' – יש לפרט התאמה.")
-        if not st.session_state.adjustments_details.strip(): errors.append("יש לפרט התייחסות להתאמות (אפשר לכתוב 'אין').")
-        if not st.session_state.confirm4: errors.append("יש לאשר את סעיף 4 כדי להמשיך.")
-        show_errors(errors)
-        if not errors:
-            st.session_state.step=5
-            autosave()
-            st.rerun()
-
-# --- סעיף 5 ---
-if st.session_state.step == 5:
-    st.subheader("סעיף 5 מתוך 6 – מוטיבציה")
-    likert=["בכלל לא מסכים/ה","1","2","3","4","מסכים/ה מאוד"]
-    st.radio("1) מוכן/ה להשקיע מאמץ נוסף להגיע למקום המועדף *", likert, horizontal=True, key="m1")
-    st.radio("2) ההכשרה המעשית חשובה לי כהזדמנות משמעותית להתפתחות *", likert, horizontal=True, key="m2")
-    st.radio("3) אהיה מחויב/ת להגיע בזמן ולהתמיד גם בתנאים מאתגרים *", likert, horizontal=True, key="m3")
-    st.checkbox("אני מאשר/ת את המידע בסעיף 5 ומעונ/ה להמשיך", key="confirm5")
-    back, nxt = nav_buttons(True)
-    if back:
-        st.session_state.step=4
-        autosave()
-        st.rerun()
-    if nxt:
-        errors=[]
-        if not (st.session_state.m1 and st.session_state.m2 and st.session_state.m3):
-            errors.append("יש לענות על שלוש שאלות המוטיבציה.")
-        if not st.session_state.confirm5: errors.append("יש לאשר את סעיף 5 כדי להמשיך.")
-        show_errors(errors)
-        if not errors:
-            st.session_state.step=6
-            autosave()
-            st.rerun()
-
-# --- סעיף 6 ---
-if st.session_state.step == 6:
-    st.subheader("סעיף 6 מתוך 6 – סיכום ושליחה")
-    st.checkbox("אני מאשר/ת כי המידע שמסרתי נכון ומדויק, וידוע לי שאין התחייבות להתאמה מלאה לבחירותיי. *", key="confirm_final")
-    back, send = nav_buttons(True, "שליחה ✉️")
-    if back:
-        st.session_state.step=5
-        autosave()
-        st.rerun()
-
-    if send:
-        errors=[]
-        if not st.session_state.confirm_final: errors.append("יש לאשר את ההצהרה.")
-        if not st.session_state.first_name.strip(): errors.append("סעיף 1: חסר שם פרטי.")
-        if not st.session_state.last_name.strip():  errors.append("סעיף 1: חסר שם משפחה.")
-        if not valid_id(st.session_state.nat_id):  errors.append("סעיף 1: ת״ז חייבת להיות 8–9 ספרות.")
-        show_errors(errors)
-        if not errors:
-            ranks = st.session_state.get("ranks", {})
-            rank_clean = {f"דירוג_{k}": v for k,v in ranks.items()}
-            extra_langs = st.session_state.extra_langs
-            row = {
-                "תאריך_שליחה": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "שם_פרטי": st.session_state.first_name.strip(),
-                "שם_משפחה": st.session_state.last_name.strip(),
-                "תעודת_זהות": st.session_state.nat_id.strip(),
-                "מין": st.session_state.gender,
-                "שיוך_חברתי": st.session_state.social_affil,
-                "שפת_אם": (st.session_state.other_mt.strip()
-                            if st.session_state.mother_tongue == "אחר..." else st.session_state.mother_tongue),
-                "שפות_נוספות": "; ".join([x for x in extra_langs if x != "אחר..."] +
-                                          ([st.session_state.extra_langs_other.strip()]
-                                           if "אחר..." in extra_langs else [])),
-                "טלפון": st.session_state.phone.strip(),
-                "כתובת": st.session_state.address.strip(),
-                "אימייל": st.session_state.email.strip(),
-                "שנת_לימודים": (st.session_state.study_year_other.strip()
-                                 if st.session_state.study_year == "אחר..." else st.session_state.study_year),
-                "מסלול_לימודים": st.session_state.track.strip(),
-                "ניידות": (st.session_state.mobility_other.strip()
-                           if st.session_state.mobility == "אחר..." else st.session_state.mobility),
-                "הכשרה_קודמת": st.session_state.prev_training,
-                "הכשרה_קודמת_מקום_ותחום": st.session_state.prev_place.strip(),
-                "הכשרה_קודמת_מדריך_ומיקום": st.session_state.prev_mentor.strip(),
-                "הכשרה_קודמת_בן_זוג": st.session_state.prev_partner.strip(),
-                "תחומים_מועדפים": "; ".join(
-                    [d for d in st.session_state.chosen_domains if d != "אחר..."] +
-                    ([st.session_state.domains_other.strip()]
-                     if "אחר..." in st.session_state.chosen_domains else [])
-                ),
-                "תחום_מוביל": (st.session_state.top_domain_select
-                               if st.session_state.top_domain_select and
-                                  st.session_state.top_domain_select != "— בחר/י —" else ""),
-                "בקשה_מיוחדת": st.session_state.special_request.strip(),
-                "ממוצע": st.session_state.avg_grade,
-                "התאמות": "; ".join(
-                    [a for a in st.session_state.adjustments if a != "אחר..."] +
-                    ([st.session_state.adjustments_other.strip()]
-                     if "אחר..." in st.session_state.adjustments else [])
-                ),
-                "התאמות_פרטים": st.session_state.adjustments_details.strip(),
-                "מוטיבציה_1": st.session_state.m1, "מוטיבציה_2": st.session_state.m2, "מוטיבציה_3": st.session_state.m3,
-            }
-            row.update(rank_clean)
-            try:
-                append_row(row, CSV_FILE)
-                st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
-                # לאחר שליחה – אפשר לאפס אבל להשאיר sid (לפי בקשה)
-                STATE_FILE.unlink(missing_ok=True)
-                for k in list(st.session_state.keys()):
-                    if k not in ("sid",):
-                        del st.session_state[k]
-                st.session_state.step = 1
-                autosave()
-            except Exception as e:
-                st.markdown(f"<div style='color:#b91c1c'>❌ שמירה נכשלה: {e}</div>", unsafe_allow_html=True)
+        st.warning("יש להזין סיסמה נכונה כדי להיכנס לממשק המנהל.")
