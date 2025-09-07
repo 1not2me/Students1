@@ -98,16 +98,18 @@ div.stMultiSelect > div,
   font-size:1rem!important;
 }
 
-/* טאבים */
+/* טאבים – רוחב קטן יותר */
 .stTabs [data-baseweb="tab"]{
   border-radius:14px!important;
   background:rgba(255,255,255,.65);
-  margin-inline-start:.4rem;
-  padding:.5rem 1.2rem;
+  margin-inline-start:.3rem;
+  padding:.4rem .8rem;
   font-weight:600;
-  min-width: 160px !important;
+  min-width: 110px !important;   /* במקום 160px */
   text-align:center;
+  font-size:0.9rem !important;   /* טקסט קטן יותר */
 }
+
 .stTabs [data-baseweb="tab"]:hover{
   background:rgba(255,255,255,.9);
 }
