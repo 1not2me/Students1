@@ -13,60 +13,110 @@ st.set_page_config(page_title="שאלון שיבוץ סטודנטים – תשפ
 # --- גופן David (כפי שביקשת) ---
 st.markdown("""
 <style>
-/* ===== תיקון תיבות select/multiselect ב-RTL ===== */
-
-/* הקונטיינר הפנימי של התיבה */
-div[data-baseweb="select"] > div{
-  height: 48px !important;
-  background:#fff !important;
-  border:1px solid rgba(15,23,42,.14) !important;
-  border-radius: 14px !important;
-
-  /* מרווחים לוגיים: ב-RTL ה-start = ימין, end = שמאל */
-  padding-inline-start: .80rem !important;  /* ימין – טקסט לא נדבק לשוליים */
-  padding-inline-end: 2.2rem !important;    /* שמאל – מקום לאיקון החץ */
-
-  box-shadow: 0 3px 10px rgba(15,23,42,.04) !important;
-  display:flex; align-items:center;
-  overflow: visible !important;  /* שלא יחתוך תוכן פנימי */
+:root{
+  --bg-1:#e0f7fa;    /* טורקיז רך */
+  --bg-2:#ede7f6;    /* סגול בהיר */
+  --bg-3:#fff3e0;    /* אפרסק */
+  --bg-4:#fce4ec;    /* ורדרד עדין */
+  --bg-5:#e8f5e9;    /* ירקרק בהיר */
+  --ink:#0f172a;     /* טקסט כהה */
+  --primary:#9b5de5; /* סגול בהיר */
+  --primary-700:#f15bb5; /* ורוד בהיר */
+  --ring:rgba(155,93,229,.35);
 }
 
-/* טקסט/placeholder בתיבה – חד וברור */
-div[data-baseweb="select"] [class*="SingleValue"],
-div[data-baseweb="select"] [class*="ValueContainer"]{
-  color:#0f172a !important;
+/* רקע צבעוני עם שילוב בלובים */
+[data-testid="stAppViewContainer"]{
+  background:
+    radial-gradient(1200px 600px at 15% 10%, var(--bg-2) 0%, transparent 70%),
+    radial-gradient(1000px 700px at 85% 20%, var(--bg-3) 0%, transparent 70%),
+    radial-gradient(900px 500px at 50% 80%, var(--bg-4) 0%, transparent 70%),
+    radial-gradient(700px 400px at 10% 85%, var(--bg-5) 0%, transparent 70%),
+    linear-gradient(135deg, var(--bg-1) 0%, #ffffff 100%) !important;
+  color: var(--ink);
+}
+
+/* כרטיס התוכן המרכזי – זכוכית מטושטשת */
+.main .block-container{
+  background: rgba(255,255,255,.78);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(15,23,42,.08);
+  box-shadow: 0 15px 35px rgba(15,23,42,.08);
+  border-radius: 24px;
+  padding: 2rem 2rem 2.5rem;
+}
+
+/* כותרות */
+h1, h2, h3, .stMarkdown h1, .stMarkdown h2{
+  letter-spacing:.5px;
+  text-shadow: 0 1px 2px rgba(255,255,255,.7);
+  font-weight:700;
+}
+
+/* כפתורים בהירים יותר */
+.stButton > button{
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-700) 100%) !important;
+  color:#fff !important;
+  border:none !important;
+  border-radius: 16px !important;
+  padding:.75rem 1.3rem !important;
   font-size:1rem !important;
-  line-height:1.2 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  font-weight:600 !important;
+  box-shadow: 0 6px 16px var(--ring) !important;
+  transition: all .15s ease !important;
 }
-div[data-baseweb="select"] [class*="placeholder"]{
-  color:#515151 !important;
-  opacity:1 !important;
-  font-size:.95rem !important;
+.stButton > button:hover{
+  transform: translateY(-2px) scale(1.01);
+  filter: brightness(1.08);
 }
-
-/* שדה ה-input הפנימי (למצב חיפוש) */
-div[data-baseweb="select"] input{
-  color:#0f172a !important;
-  text-align:right !important;
+.stButton > button:focus{
+  outline: none !important;
+  box-shadow: 0 0 0 4px var(--ring) !important;
 }
 
-/* איקון החץ – שיהיה בצד שמאל + ניגודיות טובה */
-div[data-baseweb="select"] svg{
-  color:#333 !important;
-  inset-inline-end: .65rem !important;  /* ב-RTL זה שמאל */
-  inset-inline-start: auto !important;
+/* אינפוטים ותיבות בחירה עם טקסט ברור */
+div.stSelectbox > div, div.stMultiSelect > div,
+div[data-baseweb="select"] > div, .stTextInput > div > div > input{
+  border-radius: 14px !important;
+  border: 1px solid rgba(15,23,42,.12) !important;
+  box-shadow: 0 3px 10px rgba(15,23,42,.04) !important;
+  padding:.4rem .6rem !important;
+  color: var(--ink) !important;
+  font-size: 1rem !important;
+}
+div[data-baseweb="select"] [class*="placeholder"],
+.stTextInput > div > div > input::placeholder{
+  color: #555 !important; 
+  opacity: 1 !important;
+  font-size: 0.95rem;
 }
 
-/* רשימת האפשרויות – יישור לימין */
-ul[role="listbox"]{
-  direction: rtl !important;
-  text-align: right !important;
+/* RTL ויישור לימין */
+.stApp, .main, [data-testid="stSidebar"]{ direction: rtl; text-align: right; }
+label, .stMarkdown, .stText, .stCaption{ text-align: right !important; }
+.row-widget.stRadio > div, div[role="radiogroup"]{ direction: rtl; text-align: right; }
+div[data-baseweb="select"]{ direction: rtl !important; text-align: right !important; }
+div[data-baseweb="select"] > div{ direction: rtl !important; text-align: right !important; }
+div[data-baseweb="select"] [class*="placeholder"],
+div[data-baseweb="select"] [class*="SingleValue"],
+div[data-baseweb="select"] [class*="ValueContainer"],
+div[data-baseweb="select"] input{ direction: rtl !important; text-align: right !important; }
+ul[role="listbox"]{ direction: rtl !important; text-align: right !important; }
+ul[role="listbox"] [role="option"],
+ul[role="listbox"] [role="option"] > div{ direction: rtl !important; text-align: right !important; }
+div[data-baseweb="select"] > div{ padding-right:.6rem; padding-left:.3rem; }
+
+/* טאבים – מודרני */
+.stTabs [data-baseweb="tab"]{
+  border-radius: 14px !important;
+  background: rgba(255,255,255,.65);
+  margin-inline-start: .5rem;
+  padding:.5rem 1rem;
+  font-weight:600;
+  transition: background .2s ease;
 }
-ul[role="listbox"] [role="option"] > div{
-  text-align:right !important;
+.stTabs [data-baseweb="tab"]:hover{
+  background: rgba(255,255,255,.9);
 }
 </style>
 """, unsafe_allow_html=True)
