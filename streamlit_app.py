@@ -21,135 +21,68 @@ html, body, [class*="css"] { font-family:'David',sans-serif!important; }
 # ====== עיצוב מודרני + RTL ======
 st.markdown("""
 <style>
-/* ========= ערכי צבעים ========= */
 :root{
-  --field-bg: #faf5ff;      /* סגול פסטל בהיר (רקע) */
-  --field-bg-hover:#f3e8ff; /* hover */
-  --field-border:#d0bdf4;   /* מסגרת רכה */
-  --field-border-strong:#b892ff; /* hover/focus */
-  --field-ink:#2d1656;      /* טקסט כהה */
-  --field-shadow: rgba(123,31,162,.08);
-  --ring: rgba(155,93,229,.28);
+  --bg-1:#e0f7fa; --bg-2:#ede7f6; --bg-3:#fff3e0; --bg-4:#fce4ec; --bg-5:#e8f5e9;
+  --ink:#0f172a; --primary:#9b5de5; --primary-700:#f15bb5; --ring:rgba(155,93,229,.35);
+}
+[data-testid="stAppViewContainer"]{
+  background:
+    radial-gradient(1200px 600px at 15% 10%, var(--bg-2) 0%, transparent 70%),
+    radial-gradient(1000px 700px at 85% 20%, var(--bg-3) 0%, transparent 70%),
+    radial-gradient(900px 500px at 50% 80%, var(--bg-4) 0%, transparent 70%),
+    radial-gradient(700px 400px at 10% 85%, var(--bg-5) 0%, transparent 70%),
+    linear-gradient(135deg, var(--bg-1) 0%, #ffffff 100%) !important;
+  color: var(--ink);
+}
+.main .block-container{
+  background: rgba(255,255,255,.78); backdrop-filter: blur(10px);
+  border:1px solid rgba(15,23,42,.08); box-shadow:0 15px 35px rgba(15,23,42,.08);
+  border-radius:24px; padding:2rem 2rem 2.5rem;
+}
+h1,h2,h3,.stMarkdown h1,.stMarkdown h2{ letter-spacing:.5px; text-shadow:0 1px 2px rgba(255,255,255,.7); font-weight:700; }
+
+/* כפתור בהיר יותר */
+.stButton > button{
+  background:linear-gradient(135deg,var(--primary) 0%,var(--primary-700) 100%)!important;
+  color:#fff!important; border:none!important; border-radius:16px!important;
+  padding:.75rem 1.3rem!important; font-size:1rem!important; font-weight:600!important;
+  box-shadow:0 6px 16px var(--ring)!important; transition:all .15s ease!important;
+}
+.stButton > button:hover{ transform:translateY(-2px) scale(1.01); filter:brightness(1.08); }
+.stButton > button:focus{ outline:none!important; box-shadow:0 0 0 4px var(--ring)!important; }
+
+/* קלטים ו-selectים ברורים */
+div.stSelectbox > div, div.stMultiSelect > div, .stTextInput > div > div > input{
+  border-radius:14px!important; border:1px solid rgba(15,23,42,.12)!important;
+  box-shadow:0 3px 10px rgba(15,23,42,.04)!important; padding:.4rem .6rem!important;
+  color:var(--ink)!important; font-size:1rem!important;
 }
 
-/* ========= תבנית עיצוב אחידה לשדות ========= */
-.field-like{
-  background: var(--field-bg) !important;
-  border: 1.5px solid var(--field-border) !important;
-  border-radius: 14px !important;
-  box-shadow: 0 2px 8px var(--field-shadow) !important;
-  color: var(--field-ink) !important;
-  transition: background .2s ease, border-color .2s ease, box-shadow .2s ease !important;
-  min-height: 56px !important;
-}
-
-/* Hover + Focus */
-.field-like:hover{
-  background: var(--field-bg-hover) !important;
-  border-color: var(--field-border-strong) !important;
-  box-shadow: 0 4px 12px rgba(123,31,162,.15) !important;
-}
-.field-like:focus-within{
-  outline: none !important;
-  box-shadow: 0 0 0 4px var(--ring), 0 4px 12px rgba(123,31,162,.15) !important;
-  border-color: var(--field-border-strong) !important;
-}
-
-/* ========= SELECT / MULTISELECT ========= */
+/* תיקון select/multiselect ב-RTL (מרווח לטקסט וחץ לשמאל) */
 div[data-baseweb="select"] > div{
-  padding-inline-start: 1rem !important;
-  padding-inline-end: 2.6rem !important;
+  height:48px!important; background:#fff!important; border:1px solid rgba(15,23,42,.14)!important;
+  border-radius:14px!important; padding-inline-start:.8rem!important; padding-inline-end:2.2rem!important;
+  box-shadow:0 3px 10px rgba(15,23,42,.04)!important; display:flex; align-items:center;
 }
-div[data-baseweb="select"] > div{ /* הוסף את המחלקה */
-  composes: field-like;
+div[data-baseweb="select"] [class*="SingleValue"], div[data-baseweb="select"] [class*="ValueContainer"]{
+  color:#0f172a!important; font-size:1rem!important; white-space:nowrap!important; overflow:hidden!important; text-overflow:ellipsis!important;
 }
+div[data-baseweb="select"] [class*="placeholder"], .stTextInput > div > div > input::placeholder{ color:#555!important; opacity:1!important; font-size:.95rem; }
+div[data-baseweb="select"] input{ color:#0f172a!important; text-align:right!important; }
+div[data-baseweb="select"] svg{ color:#333!important; inset-inline-end:.65rem!important; inset-inline-start:auto!important; }
+ul[role="listbox"]{ direction:rtl!important; text-align:right!important; }
+ul[role="listbox"] [role="option"] > div{ text-align:right!important; }
 
-/* טקסט, placeholder וחץ */
-div[data-baseweb="select"] [class*="SingleValue"],
-div[data-baseweb="select"] [class*="placeholder"]{
-  color: var(--field-ink) !important;
-  font-weight: 500;
-  max-width: calc(100% - .25rem) !important;
-  overflow: hidden !important; white-space: nowrap !important; text-overflow: ellipsis !important;
-}
-div[data-baseweb="select"] [class*="indicatorSeparator"]{ display:none !important; }
-div[data-baseweb="select"] svg{
-  color:#5b21b6 !important; inset-inline-end:.7rem !important; inset-inline-start:auto !important;
-}
+/* RTL כללי */
+.stApp,.main,[data-testid="stSidebar"]{ direction:rtl; text-align:right; }
+label,.stMarkdown,.stText,.stCaption{ text-align:right!important; }
 
-/* ========= TEXT INPUT ========= */
-.stTextInput > div > div{
-  composes: field-like;
-  padding: 0 !important;
-}
-.stTextInput input{
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  color: var(--field-ink) !important;
-  font-size: 1.02rem !important;
-  height: 56px !important;
-  padding-inline: 1rem !important;
-}
-.stTextInput input::placeholder{ color:#5a5a5a !important; opacity:1 !important; }
-
-/* ========= NUMBER INPUT ========= */
-.stNumberInput > div > div{
-  composes: field-like;
-  padding: 0 !important;
-}
-.stNumberInput input{
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  color: var(--field-ink) !important;
-  font-size: 1.02rem !important;
-  height: 56px !important;
-  padding-inline: 1rem !important;
-}
-.stNumberInput input::placeholder{ color:#5a5a5a !important; opacity:1 !important; }
-
-/* ========= TEXT AREA ========= */
-.stTextArea > div > div{
-  composes: field-like;
-  min-height: 120px !important; /* טקסט ארוך */
-  padding: .6rem .9rem !important;
-}
-.stTextArea textarea{
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  color: var(--field-ink) !important;
-  font-size: 1.02rem !important;
-}
-
-/* ========= DATE INPUT ========= */
-.stDateInput > div > div{
-  composes: field-like;
-  padding: 0 !important;
-}
-.stDateInput input{
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  color: var(--field-ink) !important;
-  font-size: 1.02rem !important;
-  height: 56px !important;
-  padding-inline: 1rem !important;
-}
-
-/* ========= רדיו/צ'קבוקס – קו עדין בלבד (אופציונלי) ========= */
-div[role="radiogroup"], div[role="group"]{
-  background: rgba(255,255,255,.6);
-  border: 1px solid rgba(0,0,0,.06);
-  border-radius: 12px;
-  padding: .6rem .8rem;
-}
-
-/* ========= RTL נשאר בתוקף ========= */
-.stApp,.main,[data-testid="stSidebar"]{ direction: rtl; text-align: right; }
+/* טאבים */
+.stTabs [data-baseweb="tab"]{ border-radius:14px!important; background:rgba(255,255,255,.65); margin-inline-start:.5rem; padding:.5rem 1rem; font-weight:600; transition:background .2s; }
+.stTabs [data-baseweb="tab"]:hover{ background:rgba(255,255,255,.9); }
 </style>
 """, unsafe_allow_html=True)
+
 CSV_FILE = Path("שאלון_שיבוץ.csv")
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")
 is_admin_mode = st.query_params.get("admin", ["0"])[0] == "1"
