@@ -402,8 +402,6 @@ if submitted:
         try:
             append_row(row, CSV_FILE)
             st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
-            st.download_button("📥 הורדת תשובה (CSV)",
-                               data=pd.DataFrame([row]).to_csv(index=False, encoding="utf-8-sig"),
-                               file_name="תשובה_בודדת.csv", mime="text/csv")
+            
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
