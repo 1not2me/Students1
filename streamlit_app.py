@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -11,19 +10,7 @@ import re
 # =========================
 st.set_page_config(page_title="שאלון שיבוץ סטודנטים – תשפ״ו", layout="centered")
 
-# --- פונקציית הצגת שגיאות (טקסט בלבד) ---
-def show_errors(errors: list[str]):
-    if not errors:
-        return
-    st.markdown(
-        "<div style='color:#b91c1c; font-weight:600; margin:.25rem 0 .35rem;'>נמצאו שגיאות:</div>"
-        + "<ul style='margin-top:0; padding-right:1.2rem; color:#b91c1c;'>"
-        + "".join([f"<li>{e}</li>" for e in errors])
-        + "</ul>",
-        unsafe_allow_html=True,
-    )
-
-# --- גופן David (החליפו ל־URL אמיתי אם יש) ---
+# גופן David (שימי קובץ/קישור אמיתי במקום example.com אם תרצי)
 st.markdown("""
 <style>
 @font-face { font-family:'David'; src:url('https://example.com/David.ttf') format('truetype'); }
@@ -31,16 +18,12 @@ html, body, [class*="css"] { font-family:'David',sans-serif!important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- עיצוב מודרני + RTL + אחידות לכל התיבות ---
+# ====== עיצוב מודרני + RTL ======
 st.markdown("""
 <style>
 :root{
   --bg-1:#e0f7fa; --bg-2:#ede7f6; --bg-3:#fff3e0; --bg-4:#fce4ec; --bg-5:#e8f5e9;
   --ink:#0f172a; --primary:#9b5de5; --primary-700:#f15bb5; --ring:rgba(155,93,229,.35);
-
-  --field-bg:#faf5ff; --field-bg-hover:#f3e8ff; --field-border:#d0bdf4;
-  --field-border-strong:#b892ff; --field-ink:#2d1656; --field-shadow:rgba(123,31,162,.08);
-  --ring2:rgba(155,93,229,.28);
 }
 [data-testid="stAppViewContainer"]{
   background:
@@ -52,12 +35,9 @@ st.markdown("""
   color: var(--ink);
 }
 .main .block-container{
-  background: rgba(255,255,255,.78);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(15,23,42,.08);
-  box-shadow: 0 15px 35px rgba(15,23,42,.08);
-  border-radius: 24px;
-  padding: 2rem 2rem 2.5rem;
+  background: rgba(255,255,255,.78); backdrop-filter: blur(10px);
+  border:1px solid rgba(15,23,42,.08); box-shadow:0 15px 35px rgba(15,23,42,.08);
+  border-radius:24px; padding:2rem 2rem 2.5rem;
 }
 h1,h2,h3,.stMarkdown h1,.stMarkdown h2{ letter-spacing:.5px; text-shadow:0 1px 2px rgba(255,255,255,.7); font-weight:700; }
 
@@ -71,85 +51,35 @@ h1,h2,h3,.stMarkdown h1,.stMarkdown h2{ letter-spacing:.5px; text-shadow:0 1px 2
 .stButton > button:hover{ transform:translateY(-2px) scale(1.01); filter:brightness(1.08); }
 .stButton > button:focus{ outline:none!important; box-shadow:0 0 0 4px var(--ring)!important; }
 
-/* תבנית אחידה לשדות */
-.field-like{
-  background:var(--field-bg)!important;
-  border:1.5px solid var(--field-border)!important;
-  border-radius:14px!important;
-  box-shadow:0 2px 8px var(--field-shadow)!important;
-  color:var(--field-ink)!important;
-  min-height:56px!important;
-  transition:background .2s, border-color .2s, box-shadow .2s!important;
-}
-.field-like:hover{
-  background:var(--field-bg-hover)!important;
-  border-color:var(--field-border-strong)!important;
-  box-shadow:0 4px 12px rgba(123,31,162,.15)!important;
-}
-.field-like:focus-within{
-  outline:none!important; border-color:var(--field-border-strong)!important;
-  box-shadow:0 0 0 4px var(--ring2), 0 4px 12px rgba(123,31,162,.15)!important;
+/* קלטים ו-selectים ברורים */
+div.stSelectbox > div, div.stMultiSelect > div, .stTextInput > div > div > input{
+  border-radius:14px!important; border:1px solid rgba(15,23,42,.12)!important;
+  box-shadow:0 3px 10px rgba(15,23,42,.04)!important; padding:.4rem .6rem!important;
+  color:var(--ink)!important; font-size:1rem!important;
 }
 
-/* SELECT / MULTISELECT */
-div.stSelectbox > div > div, div.stMultiSelect > div > div{ composes: field-like; padding:0!important; }
+/* תיקון select/multiselect ב-RTL (מרווח לטקסט וחץ לשמאל) */
 div[data-baseweb="select"] > div{
-  composes: field-like;
-  padding-inline-start:1rem!important; padding-inline-end:2.8rem!important;
-  height:56px!important; min-height:56px!important; display:flex; align-items:center;
-  background:transparent!important; box-shadow:none!important; border:none!important;
+  height:48px!important; background:#fff!important; border:1px solid rgba(15,23,42,.14)!important;
+  border-radius:14px!important; padding-inline-start:.8rem!important; padding-inline-end:2.2rem!important;
+  box-shadow:0 3px 10px rgba(15,23,42,.04)!important; display:flex; align-items:center;
 }
-div[data-baseweb="select"] [class*="indicatorSeparator"]{ display:none!important; }
-div[data-baseweb="select"] svg{ color:#5b21b6!important; inset-inline-end:.7rem!important; inset-inline-start:auto!important; }
-div[data-baseweb="select"] [class*="ValueContainer"],
-div[data-baseweb="select"] [class*="SingleValue"],
-div[data-baseweb="select"] [class*="placeholder"]{
-  color:var(--field-ink)!important; font-weight:500; max-width:calc(100% - .25rem)!important;
-  overflow:hidden!important; white-space:nowrap!important; text-overflow:ellipsis!important; font-size:1.02rem!important;
+div[data-baseweb="select"] [class*="SingleValue"], div[data-baseweb="select"] [class*="ValueContainer"]{
+  color:#0f172a!important; font-size:1rem!important; white-space:nowrap!important; overflow:hidden!important; text-overflow:ellipsis!important;
 }
-
-/* TEXT INPUT */
-.stTextInput > div > div{ composes: field-like; padding:0!important; }
-.stTextInput input{
-  background:transparent!important; border:none!important; box-shadow:none!important;
-  color:var(--field-ink)!important; font-size:1.02rem!important;
-  height:56px!important; padding-inline:1rem!important;
-}
-.stTextInput input::placeholder{ color:#5a5a5a!important; opacity:1!important; }
-
-/* NUMBER INPUT */
-.stNumberInput > div > div{ composes: field-like; padding:0!important; }
-.stNumberInput input{
-  background:transparent!important; border:none!important; box-shadow:none!important;
-  color:var(--field-ink)!important; font-size:1.02rem!important;
-  height:56px!important; padding-inline:1rem!important;
-}
-.stNumberInput input::placeholder{ color:#5a5a5a!important; opacity:1!important; }
-
-/* TEXT AREA */
-.stTextArea > div > div{ composes: field-like; min-height:120px!important; padding:.6rem .9rem!important; }
-.stTextArea textarea{
-  background:transparent!important; border:none!important; box-shadow:none!important;
-  color:var(--field-ink)!important; font-size:1.02rem!important;
-}
-
-/* DATE INPUT */
-.stDateInput > div > div{ composes: field-like; padding:0!important; }
-.stDateInput input{
-  background:transparent!important; border:none!important; box-shadow:none!important;
-  color:var(--field-ink)!important; font-size:1.02rem!important;
-  height:56px!important; padding-inline:1rem!important;
-}
-
-/* מרווח אחיד */
-div.stSelectbox, div.stMultiSelect, .stTextInput, .stNumberInput, .stTextArea, .stDateInput{ margin-bottom: .9rem; }
-
-/* RTL */
-.stApp,.main,[data-testid="stSidebar"]{ direction:rtl; text-align:right; }
-label,.stMarkdown,.stText,.stCaption{ text-align:right!important; }
-div[role="radiogroup"]{ direction:rtl; text-align:right; }
+div[data-baseweb="select"] [class*="placeholder"], .stTextInput > div > div > input::placeholder{ color:#555!important; opacity:1!important; font-size:.95rem; }
+div[data-baseweb="select"] input{ color:#0f172a!important; text-align:right!important; }
+div[data-baseweb="select"] svg{ color:#333!important; inset-inline-end:.65rem!important; inset-inline-start:auto!important; }
 ul[role="listbox"]{ direction:rtl!important; text-align:right!important; }
 ul[role="listbox"] [role="option"] > div{ text-align:right!important; }
+
+/* RTL כללי */
+.stApp,.main,[data-testid="stSidebar"]{ direction:rtl; text-align:right; }
+label,.stMarkdown,.stText,.stCaption{ text-align:right!important; }
+
+/* טאבים */
+.stTabs [data-baseweb="tab"]{ border-radius:14px!important; background:rgba(255,255,255,.65); margin-inline-start:.5rem; padding:.5rem 1rem; font-weight:600; transition:background .2s; }
+.stTabs [data-baseweb="tab"]:hover{ background:rgba(255,255,255,.9); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -181,7 +111,7 @@ def _pick_excel_engine() -> str | None:
 def df_to_excel_bytes(df: pd.DataFrame, sheet: str = "תשובות") -> bytes:
     engine = _pick_excel_engine()
     if engine is None:
-        st.markdown("<div style='color:#b91c1c'>לא נמצא מנוע לייצוא Excel. הוסיפו ל־requirements.txt: <b>xlsxwriter</b> או <b>openpyxl</b>.</div>", unsafe_allow_html=True)
+        st.error("לא נמצא מנוע לייצוא Excel. הוסיפו ל-requirements.txt: `xlsxwriter` או `openpyxl`.")
         return b""
     buf = BytesIO()
     with pd.ExcelWriter(buf, engine=engine) as w:
@@ -227,7 +157,7 @@ if is_admin_mode:
                                        file_name="שאלון_שיבוץ_כל_הנתונים.xlsx",
                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         else:
-            st.markdown("<div style='color:#b91c1c'>סיסמה שגויה</div>", unsafe_allow_html=True)
+            st.error("סיסמה שגויה")
     st.stop()
 
 # =========================
@@ -246,6 +176,7 @@ def nav_buttons(show_back=True, proceed_label="המשך לסעיף הבא"):
 # --- סעיף 1 ---
 if st.session_state.step == 1:
     st.subheader("סעיף 1 מתוך 6 – פרטים אישיים של הסטודנט/ית")
+    st.write("אנא מלאו את הפרטים האישיים לצורך זיהוי ותקשורת.")
 
     first_name = st.text_input("שם פרטי *", key="first_name")
     last_name  = st.text_input("שם משפחה *", key="last_name")
@@ -310,15 +241,14 @@ if st.session_state.step == 1:
         if mobility=="אחר..." and not st.session_state.get("mobility_other","").strip():
             errors.append("יש לפרט ניידות (אחר).")
         if not confirm1: errors.append("יש לאשר את סעיף 1 כדי להמשיך.")
-        show_errors(errors)
-        if not errors:
-            st.session_state.step=2
-            st.rerun()
+        if errors:
+            st.error("נמצאו שגיאות:"); [st.markdown(f"- :red[{e}]") for e in errors]
+        else:
+            st.session_state.step=2; st.rerun()
 
 # --- סעיף 2 ---
 if st.session_state.step == 2:
     st.subheader("סעיף 2 מתוך 6 – העדפת שיבוץ")
-
     prev_training = st.selectbox("האם עברת הכשרה מעשית בשנה קודמת? *", ["כן","לא","אחר..."], key="prev_training")
     if prev_training in ["כן","אחר..."]:
         prev_place  = st.text_input("אם כן, נא ציין שם מקום ותחום ההתמחות *", key="prev_place")
@@ -368,11 +298,10 @@ if st.session_state.step == 2:
         if not unique_ranks(ranks): errors.append("לא ניתן להשתמש באותו דירוג ליותר ממוסד אחד.")
         if not special_request.strip(): errors.append("יש לציין אם יש בקשה מיוחדת (אפשר לכתוב 'אין').")
         if not confirm2: errors.append("יש לאשר את סעיף 2 כדי להמשיך.")
-        show_errors(errors)
-        if not errors:
-            st.session_state.ranks=ranks
-            st.session_state.step=3
-            st.rerun()
+        if errors:
+            st.error("נמצאו שגיאות:"); [st.markdown(f"- :red[{e}]") for e in errors]
+        else:
+            st.session_state.ranks=ranks; st.session_state.step=3; st.rerun()
 
 # --- סעיף 3 ---
 if st.session_state.step == 3:
@@ -385,10 +314,10 @@ if st.session_state.step == 3:
         errors=[]
         if avg_grade is None or avg_grade<=0: errors.append("יש להזין ממוצע ציונים גדול מ-0.")
         if not confirm3: errors.append("יש לאשר את סעיף 3 כדי להמשיך.")
-        show_errors(errors)
-        if not errors:
-            st.session_state.step=4
-            st.rerun()
+        if errors:
+            st.error("נמצאו שגיאות:"); [st.markdown(f"- :red[{e}]") for e in errors]
+        else:
+            st.session_state.step=4; st.rerun()
 
 # --- סעיף 4 ---
 if st.session_state.step == 4:
@@ -414,10 +343,10 @@ if st.session_state.step == 4:
             errors.append("נבחר 'אחר' – יש לפרט התאמה.")
         if not adjustments_details.strip(): errors.append("יש לפרט התייחסות להתאמות (אפשר לכתוב 'אין').")
         if not confirm4: errors.append("יש לאשר את סעיף 4 כדי להמשיך.")
-        show_errors(errors)
-        if not errors:
-            st.session_state.step=5
-            st.rerun()
+        if errors:
+            st.error("נמצאו שגיאות:"); [st.markdown(f"- :red[{e}]") for e in errors]
+        else:
+            st.session_state.step=5; st.rerun()
 
 # --- סעיף 5 ---
 if st.session_state.step == 5:
@@ -433,10 +362,10 @@ if st.session_state.step == 5:
         errors=[]
         if not (m1 and m2 and m3): errors.append("יש לענות על שלוש שאלות המוטיבציה.")
         if not confirm5: errors.append("יש לאשר את סעיף 5 כדי להמשיך.")
-        show_errors(errors)
-        if not errors:
-            st.session_state.step=6
-            st.rerun()
+        if errors:
+            st.error("נמצאו שגיאות:"); [st.markdown(f"- :red[{e}]") for e in errors]
+        else:
+            st.session_state.step=6; st.rerun()
 
 # --- סעיף 6 ---
 if st.session_state.step == 6:
@@ -449,9 +378,10 @@ if st.session_state.step == 6:
         if not confirm_final: errors.append("יש לאשר את ההצהרה.")
         if not st.session_state.get("first_name","").strip(): errors.append("סעיף 1: חסר שם פרטי.")
         if not st.session_state.get("last_name","").strip():  errors.append("סעיף 1: חסר שם משפחה.")
-        if not valid_id(st.session_state.get("nat_id","")):  errors.append("סעיף 1: ת״ז חייבת להיות 8–9 ספרות.")
-        show_errors(errors)
-        if not errors:
+        if not valid_id(st.session_state.get("nat_id","")):  errors.append("סעיף 1: ת״ז לא תקינה.")
+        if errors:
+            st.error("נמצאו שגיאות:"); [st.markdown(f"- :red[{e}]") for e in errors]
+        else:
             ranks = st.session_state.get("ranks", {})
             rank_clean = {f"דירוג_{k}": v for k,v in ranks.items()}
             extra_langs = st.session_state.get("extra_langs", [])
@@ -503,4 +433,4 @@ if st.session_state.step == 6:
                 st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
                 st.session_state.step=1
             except Exception as e:
-                st.markdown(f"<div style='color:#b91c1c'>❌ שמירה נכשלה: {e}</div>", unsafe_allow_html=True)
+                st.error(f"❌ שמירה נכשלה: {e}")
