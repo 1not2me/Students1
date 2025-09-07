@@ -85,25 +85,42 @@ label,.stMarkdown,.stText,.stCaption{ text-align:right!important; }
 
 CSV_FILE = Path("שאלון_שיבוץ.csv")
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")
-is_admin_mode = st.query_params.get("admin", ["0"])[0] == "1"
+
+# תאימות לפרמטרי כתובת (API ישנים/חדשים)
+try:
+    params = st.query_params  # Streamlit >= 1.30
+except Exception:
+    params = {}
+
+admin_param = params.get("admin")
+is_admin_mode = (admin_param == "1") or (isinstance(admin_param, list) and admin_param and admin_param[0] == "1")
 
 # =========================
 # פונקציות עזר
 # =========================
 def load_df(path: Path) -> pd.DataFrame:
-    return pd.read_csv(path, encoding="utf-8-sig") if path.exists() else pd.DataFrame()
+    try:
+        return pd.read_csv(path, encoding="utf-8-sig") if path.exists() else pd.DataFrame()
+    except Exception:
+        # לא מציגים שגיאה טכנית/קוד – רק הודעה כללית:
+        st.error("לא ניתן לקרוא את קובץ הנתונים כרגע.")
+        return pd.DataFrame()
 
 def append_row(row: dict, path: Path):
-    df_new = pd.DataFrame([row])
-    df_new.to_csv(path, mode="a", index=False, encoding="utf-8-sig", header=not path.exists())
+    try:
+        df_new = pd.DataFrame([row])
+        df_new.to_csv(path, mode="a", index=False, encoding="utf-8-sig", header=not path.exists())
+    except Exception:
+        # אין הדפסת יוצא מן הכלל/קוד
+        st.error("שמירת הנתונים נכשלה. נסו שוב מאוחר יותר.")
 
 def _pick_excel_engine() -> str | None:
     try:
-        import xlsxwriter  # noqa
+        import xlsxwriter  # noqa: F401
         return "xlsxwriter"
     except Exception:
         try:
-            import openpyxl  # noqa
+            import openpyxl  # noqa: F401
             return "openpyxl"
         except Exception:
             return None
@@ -111,18 +128,22 @@ def _pick_excel_engine() -> str | None:
 def df_to_excel_bytes(df: pd.DataFrame, sheet: str = "תשובות") -> bytes:
     engine = _pick_excel_engine()
     if engine is None:
-        st.error("לא נמצא מנוע לייצוא Excel. הוסיפו ל-requirements.txt: `xlsxwriter` או `openpyxl`.")
+        st.error("לא נמצא מנוע לייצוא Excel. הוסיפו ל-requirements.txt: xlsxwriter או openpyxl.")
         return b""
-    buf = BytesIO()
-    with pd.ExcelWriter(buf, engine=engine) as w:
-        df.to_excel(w, sheet_name=sheet, index=False)
-        if engine == "xlsxwriter":
-            ws = w.sheets[sheet]
-            for i, c in enumerate(df.columns):
-                width = min(60, max(12, int(df[c].astype(str).map(len).max() if not df.empty else 12) + 4))
-                ws.set_column(i, i, width)
-    buf.seek(0)
-    return buf.read()
+    try:
+        buf = BytesIO()
+        with pd.ExcelWriter(buf, engine=engine) as w:
+            df.to_excel(w, sheet_name=sheet, index=False)
+            if engine == "xlsxwriter":
+                ws = w.sheets[sheet]
+                for i, c in enumerate(df.columns):
+                    width = min(60, max(12, int(df[c].astype(str).map(len).max() if not df.empty else 12) + 4))
+                    ws.set_column(i, i, width)
+        buf.seek(0)
+        return buf.read()
+    except Exception:
+        st.error("ייצוא לאקסל נכשל כרגע.")
+        return b""
 
 def valid_email(v: str) -> bool: return bool(re.match(r"^[^@]+@[^@]+\.[^@]+$", v.strip()))
 def valid_phone(v: str) -> bool: return bool(re.match(r"^0\d{1,2}-?\d{6,7}$", v.strip()))
@@ -165,11 +186,12 @@ if is_admin_mode:
 # =========================
 st.title("📋 שאלון שיבוץ סטודנטים – שנת הכשרה תשפ״ו")
 st.caption("התמיכה בקוראי מסך הופעלה.")
-if "step" not in st.session_state: st.session_state.step = 1
+if "step" not in st.session_state:
+    st.session_state.step = 1
 
 def nav_buttons(show_back=True, proceed_label="המשך לסעיף הבא"):
     c1, c2 = st.columns([1,1])
-    back = c1.button("⬅ חזרה", use_container_width=True) if show_back else False
+    back = c1.button("חזרה", use_container_width=True) if show_back else False  # הוסר החץ
     nxt  = c2.button(proceed_label, use_container_width=True)
     return back, nxt
 
@@ -428,9 +450,11 @@ if st.session_state.step == 6:
                 "מוטיבציה_1": st.session_state.m1, "מוטיבציה_2": st.session_state.m2, "מוטיבציה_3": st.session_state.m3,
             }
             row.update(rank_clean)
+
+            # שמירה – ללא הדפסת שגיאת קוד אם נכשל
             try:
                 append_row(row, CSV_FILE)
                 st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
-                st.session_state.step=1
-            except Exception as e:
-                st.error(f"❌ שמירה נכשלה: {e}")
+                st.session_state.step = 1
+            except Exception:
+                st.error("❌ שמירה נכשלה. נסו שוב מאוחר יותר.")
