@@ -14,62 +14,70 @@ st.set_page_config(page_title="שאלון שיבוץ סטודנטים – תשפ
 st.markdown("""
 <style>
 :root{
-  --bg-1:#f6f9ff;   /* תכלת רך */
-  --bg-2:#fdf7ff;   /* סגלגל עדין */
-  --bg-3:#fff9f3;   /* אפרסק עדין */
-  --ink:#0f172a;    /* טקסט כהה נעים */
-  --primary:#5b6cff;/* כחול נעים */
-  --primary-700:#4754d1;
-  --ring:rgba(91,108,255,.35);
+  --bg-1:#e0f7fa;    /* טורקיז רך */
+  --bg-2:#ede7f6;    /* סגול בהיר */
+  --bg-3:#fff3e0;    /* אפרסק */
+  --bg-4:#fce4ec;    /* ורדרד עדין */
+  --bg-5:#e8f5e9;    /* ירקרק בהיר */
+  --ink:#0f172a;     /* טקסט כהה */
+  --primary:#7b1fa2; /* סגול עמוק */
+  --primary-700:#4a148c;
+  --ring:rgba(123,31,162,.35);
 }
 
-/* רקע כללי עם גרדיינט עדין */
+/* רקע צבעוני עם שילוב בלובים */
 [data-testid="stAppViewContainer"]{
   background:
-    radial-gradient(1200px 600px at 15% 5%, var(--bg-2) 0%, transparent 70%),
-    radial-gradient(900px 500px at 85% 10%, var(--bg-3) 0%, transparent 70%),
-    linear-gradient(135deg, var(--bg-1) 0%, #fbfdff 60%, #ffffff 100%) !important;
+    radial-gradient(1200px 600px at 15% 10%, var(--bg-2) 0%, transparent 70%),
+    radial-gradient(1000px 700px at 85% 20%, var(--bg-3) 0%, transparent 70%),
+    radial-gradient(900px 500px at 50% 80%, var(--bg-4) 0%, transparent 70%),
+    radial-gradient(700px 400px at 10% 85%, var(--bg-5) 0%, transparent 70%),
+    linear-gradient(135deg, var(--bg-1) 0%, #ffffff 100%) !important;
   color: var(--ink);
 }
 
-/* כרטיס התוכן המרכזי – מעט “זכוכית” */
+/* כרטיס התוכן המרכזי – זכוכית מטושטשת */
 .main .block-container{
-  background: rgba(255,255,255,.75);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(15,23,42,.05);
-  box-shadow: 0 12px 30px rgba(15,23,42,.06);
-  border-radius: 22px;
-  padding: 2rem 2rem 2.2rem;
+  background: rgba(255,255,255,.72);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(15,23,42,.08);
+  box-shadow: 0 15px 35px rgba(15,23,42,.08);
+  border-radius: 24px;
+  padding: 2rem 2rem 2.5rem;
 }
 
 /* כותרות */
 h1, h2, h3, .stMarkdown h1, .stMarkdown h2{
-  letter-spacing:.4px;
-  text-shadow: 0 1px 0 rgba(255,255,255,.6);
+  letter-spacing:.5px;
+  text-shadow: 0 1px 2px rgba(255,255,255,.7);
+  font-weight:700;
 }
 
-/* כפתורים יפים */
+/* כפתורים יפים עם גרדיינט */
 .stButton > button{
-  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-700) 100%) !important;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-700) 100%) !important;
   color:#fff !important;
   border:none !important;
-  border-radius: 14px !important;
-  padding:.7rem 1.15rem !important;
-  box-shadow: 0 6px 18px var(--ring) !important;
-  transition: transform .06s ease, box-shadow .2s ease filter .2s ease !important;
+  border-radius: 16px !important;
+  padding:.75rem 1.3rem !important;
+  font-size:1rem !important;
+  font-weight:600 !important;
+  box-shadow: 0 8px 20px var(--ring) !important;
+  transition: all .15s ease !important;
 }
-.stButton > button:hover{ transform: translateY(-1px); filter: brightness(1.02); }
+.stButton > button:hover{ transform: translateY(-2px) scale(1.01); filter: brightness(1.05); }
 .stButton > button:focus{ outline: none !important; box-shadow: 0 0 0 4px var(--ring) !important; }
 
 /* אינפוטים ותיבות בחירה */
 div.stSelectbox > div, div.stMultiSelect > div,
-div[data-baseweb="select"] > div{
-  border-radius: 12px !important;
-  border: 1px solid rgba(15,23,42,.08) !important;
-  box-shadow: 0 2px 8px rgba(15,23,42,.03) !important;
+div[data-baseweb="select"] > div, .stTextInput > div > div > input{
+  border-radius: 14px !important;
+  border: 1px solid rgba(15,23,42,.1) !important;
+  box-shadow: 0 3px 10px rgba(15,23,42,.04) !important;
+  padding:.4rem .6rem !important;
 }
 
-/* RTL ויישור לימין (כולל select/multiselect) */
+/* RTL ויישור לימין */
 .stApp, .main, [data-testid="stSidebar"]{ direction: rtl; text-align: right; }
 label, .stMarkdown, .stText, .stCaption{ text-align: right !important; }
 .row-widget.stRadio > div, div[role="radiogroup"]{ direction: rtl; text-align: right; }
@@ -82,16 +90,23 @@ div[data-baseweb="select"] input{ direction: rtl !important; text-align: right !
 ul[role="listbox"]{ direction: rtl !important; text-align: right !important; }
 ul[role="listbox"] [role="option"],
 ul[role="listbox"] [role="option"] > div{ direction: rtl !important; text-align: right !important; }
-div[data-baseweb="select"] > div{ padding-right:.5rem; padding-left:.25rem; }
+div[data-baseweb="select"] > div{ padding-right:.6rem; padding-left:.3rem; }
 
-/* טאבים – ריכוך */
+/* טאבים – מודרני */
 .stTabs [data-baseweb="tab"]{
-  border-radius: 12px !important;
-  background: rgba(255,255,255,.7);
-  margin-inline-start: .4rem;
+  border-radius: 14px !important;
+  background: rgba(255,255,255,.65);
+  margin-inline-start: .5rem;
+  padding:.5rem 1rem;
+  font-weight:600;
+  transition: background .2s ease;
+}
+.stTabs [data-baseweb="tab"]:hover{
+  background: rgba(255,255,255,.9);
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 CSV_FILE = Path("שאלון_שיבוץ.csv")
