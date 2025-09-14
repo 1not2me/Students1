@@ -437,6 +437,6 @@ if submitted:
             backup_path = backup_csv(CSV_FILE)  # גיבוי טיימסטמפי לשמירה ארוכת שנים
             st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
             if backup_path:
-                st.caption(f"נוצר גיבוי: {backup_path.name}")
+                st.caption(f"")
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
