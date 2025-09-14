@@ -1,10 +1,13 @@
 # app.py
-import streamlit as st
-import pandas as pd
-from datetime import datetime
+# -*- coding: utf-8 -*-
+import os
 from pathlib import Path
 from io import BytesIO
+from datetime import datetime
 import re
+
+import streamlit as st
+import pandas as pd
 
 # =========================
 # הגדרות כלליות
@@ -14,27 +17,14 @@ st.set_page_config(page_title="שאלון שיבוץ סטודנטים – תשפ
 # ====== עיצוב מודרני + RTL + הסתרת "Press Enter to apply" ======
 st.markdown("""
 <style>
-@font-face {
-  font-family:'David';
-  src:url('https://example.com/David.ttf') format('truetype');
-}
-html, body, [class*="css"] {
-  font-family:'David',sans-serif!important;
-}
+@font-face { font-family:'David'; src:url('https://example.com/David.ttf') format('truetype'); }
+html, body, [class*="css"] { font-family:'David',sans-serif!important; }
 
 /* ====== עיצוב מודרני + RTL ====== */
 :root{
-  --bg-1:#e0f7fa;
-  --bg-2:#ede7f6;
-  --bg-3:#fff3e0;
-  --bg-4:#fce4ec;
-  --bg-5:#e8f5e9;
-  --ink:#0f172a;
-  --primary:#9b5de5;
-  --primary-700:#f15bb5;
-  --ring:rgba(155,93,229,.35);
+  --bg-1:#e0f7fa; --bg-2:#ede7f6; --bg-3:#fff3e0; --bg-4:#fce4ec; --bg-5:#e8f5e9;
+  --ink:#0f172a; --primary:#9b5de5; --primary-700:#f15bb5; --ring:rgba(155,93,229,.35);
 }
-
 [data-testid="stAppViewContainer"]{
   background:
     radial-gradient(1200px 600px at 15% 10%, var(--bg-2) 0%, transparent 70%),
@@ -44,117 +34,88 @@ html, body, [class*="css"] {
     linear-gradient(135deg, var(--bg-1) 0%, #ffffff 100%) !important;
   color: var(--ink);
 }
-
 .main .block-container{
-  background: rgba(255,255,255,.78);
-  backdrop-filter: blur(10px);
-  border:1px solid rgba(15,23,42,.08);
-  box-shadow:0 15px 35px rgba(15,23,42,.08);
-  border-radius:24px;
-  padding:2.5rem;
-  margin-top:1rem;
+  background: rgba(255,255,255,.78); backdrop-filter: blur(10px);
+  border:1px solid rgba(15,23,42,.08); box-shadow:0 15px 35px rgba(15,23,42,.08);
+  border-radius:24px; padding:2.5rem; margin-top:1rem;
 }
-
-/* כותרות */
 h1,h2,h3,.stMarkdown h1,.stMarkdown h2{
-  text-align:center;
-  letter-spacing:.5px;
-  text-shadow:0 1px 2px rgba(255,255,255,.7);
-  font-weight:700;
-  color:#222;
-  margin-bottom:1rem;
+  text-align:center; letter-spacing:.5px; text-shadow:0 1px 2px rgba(255,255,255,.7);
+  font-weight:700; color:#222; margin-bottom:1rem;
 }
-
-/* כפתור */
 .stButton > button{
   background:linear-gradient(135deg,var(--primary) 0%,var(--primary-700) 100%)!important;
-  color:#fff!important;
-  border:none!important;
-  border-radius:18px!important;
-  padding:1rem 2rem!important;
-  font-size:1.1rem!important;
-  font-weight:600!important;
-  box-shadow:0 8px 18px var(--ring)!important;
-  transition:all .15s ease!important;
+  color:#fff!important; border:none!important; border-radius:18px!important;
+  padding:1rem 2rem!important; font-size:1.1rem!important; font-weight:600!important;
+  box-shadow:0 8px 18px var(--ring)!important; transition:all .15s ease!important;
 }
-.stButton > button:hover{
-  transform:translateY(-3px) scale(1.02);
-  filter:brightness(1.08);
+.stButton > button:hover{ transform:translateY(-3px) scale(1.02); filter:brightness(1.08); }
+.stButton > button:focus{ outline:none!important; box-shadow:0 0 0 4px var(--ring)!important; }
+div.stSelectbox > div, div.stMultiSelect > div, .stTextInput > div > div > input{
+  border-radius:14px!important; border:1px solid rgba(15,23,42,.12)!important;
+  box-shadow:0 3px 10px rgba(15,23,42,.04)!important; padding:.6rem .8rem!important; color:var(--ink)!important;
 }
-.stButton > button:focus{
-  outline:none!important;
-  box-shadow:0 0 0 4px var(--ring)!important;
-}
-
-/* קלטים */
-div.stSelectbox > div,
-div.stMultiSelect > div,
-.stTextInput > div > div > input{
-  border-radius:14px!important;
-  border:1px solid rgba(15,23,42,.12)!important;
-  box-shadow:0 3px 10px rgba(15,23,42,.04)!important;
-  padding:.6rem .8rem!important;
-  color:var(--ink)!important;
-  font-size:1rem!important;
-}
-
-/* טאבים – רוחב קטן יותר */
 .stTabs [data-baseweb="tab"]{
-  border-radius:14px!important;
-  background:rgba(255,255,255,.65);
-  margin-inline-start:.3rem;
-  padding:.4rem .8rem;
-  font-weight:600;
-  min-width: 110px !important;   /* במקום 160px */
-  text-align:center;
-  font-size:0.9rem !important;   /* טקסט קטן יותר */
+  border-radius:14px!important; background:rgba(255,255,255,.65);
+  margin-inline-start:.3rem; padding:.4rem .8rem; font-weight:600;
+  min-width:110px!important; text-align:center; font-size:.9rem!important;
 }
-
-.stTabs [data-baseweb="tab"]:hover{
-  background:rgba(255,255,255,.9);
-}
-
-/* RTL */
-.stApp,.main,[data-testid="stSidebar"]{
-  direction:rtl;
-  text-align:right;
-}
-label,.stMarkdown,.stText,.stCaption{
-  text-align:right!important;
-}
+.stTabs [data-baseweb="tab"]:hover{ background:rgba(255,255,255,.9); }
+.stApp,.main,[data-testid="stSidebar"]{ direction:rtl; text-align:right; }
+label,.stMarkdown,.stText,.stCaption{ text-align:right!important; }
 </style>
 """, unsafe_allow_html=True)
 
+# =========================
+# קבצים/סודות (שמירה לטווח ארוך + גיבויים + יומן)
+# =========================
+DATA_DIR = Path("data")
+BACKUP_DIR = DATA_DIR / "backups"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
-# =========================
-# קבצים/סודות
-# =========================
-CSV_FILE = Path("שאלון_שיבוץ.csv")
+CSV_MASTER = DATA_DIR / "שאלון_שיבוץ.csv"         # קובץ ראשי מצטבר (נשמר ומתעדכן)
+CSV_LOG    = DATA_DIR / "שאלון_שיבוץ_log.csv"     # קובץ יומן Append-Only (לעולם לא מוחקים ממנו)
+
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")  # מומלץ לשים בענן
 
-# מצב מנהל: ?admin=1
-is_admin_mode = st.query_params.get("admin", ["0"])[0] == "1"
+# מצב מנהל: ?admin=1 (תמיכה בגרסאות שונות של Streamlit)
+params = st.query_params if hasattr(st, "query_params") else {}
+is_admin_mode = (params.get("admin", "0") == "1") if isinstance(params, dict) else False
 
 # =========================
-# פונקציות עזר
+# פונקציות עזר לשמירה מתמשכת
 # =========================
 def load_df(path: Path) -> pd.DataFrame:
-    return pd.read_csv(path, encoding="utf-8-sig") if path.exists() else pd.DataFrame()
+    if path.exists():
+        try:
+            return pd.read_csv(path)
+        except Exception:
+            return pd.read_csv(path, encoding="utf-8-sig")
+    return pd.DataFrame()
 
-def append_row(row: dict, path: Path):
-    df_new = pd.DataFrame([row])
-    df_new.to_csv(path, mode="a", index=False, encoding="utf-8-sig", header=not path.exists())
+def save_master_atomically(df: pd.DataFrame) -> None:
+    """שמירה אטומית + גיבוי מתוארך של המסד הראשי (ללא מחיקה של רשומות קיימות)."""
+    tmp = path_tmp = CSV_MASTER.with_suffix(".tmp.csv")
+    df.to_csv(tmp, index=False, encoding="utf-8-sig")
+    tmp.replace(CSV_MASTER)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    (BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv").write_bytes(CSV_MASTER.read_bytes())
+
+def append_to_log(row_df: pd.DataFrame) -> None:
+    """כתיבה Append-Only – לא מוחקים, לא עורכים, תמיד מוסיפים שורה חדשה."""
+    row_df.to_csv(CSV_LOG, mode="a", index=False, encoding="utf-8-sig", header=not CSV_LOG.exists())
 
 def df_to_excel_bytes(df: pd.DataFrame, sheet: str = "תשובות") -> bytes:
-    buf = BytesIO()
-    with pd.ExcelWriter(buf, engine="xlsxwriter") as w:
+    bio = BytesIO()
+    with pd.ExcelWriter(bio, engine="xlsxwriter") as w:
         df.to_excel(w, sheet_name=sheet, index=False)
         ws = w.sheets[sheet]
         for i, col in enumerate(df.columns):
             width = min(60, max(12, int(df[col].astype(str).map(len).max() if not df.empty else 12) + 4))
             ws.set_column(i, i, width)
-    buf.seek(0)
-    return buf.read()
+    bio.seek(0)
+    return bio.read()
 
 def valid_email(v: str) -> bool:  return bool(re.match(r"^[^@]+@[^@]+\.[^@]+$", v.strip()))
 def valid_phone(v: str) -> bool:  return bool(re.match(r"^0\d{1,2}-?\d{6,7}$", v.strip()))   # 050-1234567 / 04-8123456
@@ -175,26 +136,68 @@ def show_errors(errors: list[str]):
         st.markdown(f"- :red[{e}]")
 
 # =========================
-# עמוד מנהל
+# עמוד מנהל – צפייה, הורדות, עמידות נתונים
 # =========================
 if is_admin_mode:
-    st.title("🔑 גישת מנהל – צפייה והורדות")
-    pwd = st.text_input("סיסמת מנהל:", type="password")
+    st.title("🔑 גישת מנהל – צפייה והורדות (שמירה ארוכת טווח)")
+    pwd = st.text_input("סיסמת מנהל:", type="password", key="admin_pwd")
     if pwd:
         if pwd == ADMIN_PASSWORD:
             st.success("התחברת בהצלחה ✅")
-            df = load_df(CSV_FILE)
-            if df.empty:
-                st.info("אין עדיין נתונים בקובץ.")
+
+            df_master = load_df(CSV_MASTER)
+            df_log    = load_df(CSV_LOG)
+
+            c1, c2 = st.columns(2)
+            with c1:
+                st.subheader("📦 הקובץ הראשי (מצטבר)")
+                st.write(f"סה\"כ רשומות: **{len(df_master)}**")
+            with c2:
+                st.subheader("🧾 קובץ היומן (Append-Only)")
+                st.write(f"סה\"כ רשומות ביומן: **{len(df_log)}**")
+
+            st.markdown("### הצגת הקובץ הראשי")
+            if not df_master.empty:
+                st.dataframe(df_master, use_container_width=True)
+                with st.expander("📥 הורדות – קובץ ראשי", expanded=True):
+                    st.download_button(
+                        "Excel – כל הנתונים (ראשי)",
+                        data=df_to_excel_bytes(df_master, sheet="Master"),
+                        file_name="שאלון_שיבוץ_ראשי.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="dl_master_xlsx"
+                    )
+                    st.download_button(
+                        "CSV – כל הנתונים (ראשי)",
+                        data=df_master.to_csv(index=False, encoding="utf-8-sig"),
+                        file_name="שאלון_שיבוץ_ראשי.csv",
+                        mime="text/csv",
+                        key="dl_master_csv"
+                    )
             else:
-                st.dataframe(df, use_container_width=True)
-                with st.expander("📥 הורדות", expanded=True):
-                    st.download_button("Excel – כל הנתונים", data=df_to_excel_bytes(df),
-                        file_name="שאלון_שיבוץ_כללי.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                    st.download_button("CSV – כל הנתונים",
-                        data=df.to_csv(index=False, encoding="utf-8-sig"),
-                        file_name="שאלון_שיבוץ_כללי.csv", mime="text/csv")
+                st.info("אין עדיין נתונים בקובץ הראשי.")
+
+            st.markdown("---")
+            st.markdown("### הצגת קובץ היומן (Append-Only)")
+            if not df_log.empty:
+                st.dataframe(df_log, use_container_width=True)
+                with st.expander("📥 הורדות – קובץ יומן", expanded=True):
+                    st.download_button(
+                        "Excel – יומן מלא",
+                        data=df_to_excel_bytes(df_log, sheet="Log"),
+                        file_name="שאלון_שיבוץ_יומן.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="dl_log_xlsx"
+                    )
+                    st.download_button(
+                        "CSV – יומן מלא",
+                        data=df_log.to_csv(index=False, encoding="utf-8-sig"),
+                        file_name="שאלון_שיבוץ_יומן.csv",
+                        mime="text/csv",
+                        key="dl_log_csv"
+                    )
+            else:
+                st.info("אין עדיין נתונים בקובץ היומן.")
         else:
             st.error("סיסמה שגויה")
     st.stop()
@@ -210,7 +213,6 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "סעיף 3: נתונים אקדמיים", "סעיף 4: התאמות",
     "סעיף 5: מוטיבציה", "סעיף 6: סיכום ושליחה"
 ])
-
 
 # --- סעיף 1 ---
 with tab1:
@@ -237,7 +239,6 @@ with tab1:
 
 # --- סעיף 2 ---
 with tab2:
-  
     st.subheader("העדפת שיבוץ")
     prev_training = st.selectbox("האם עברת הכשרה מעשית בשנה קודמת? *", ["כן","לא","אחר..."])
     prev_place=prev_mentor=prev_partner=""
@@ -397,12 +398,18 @@ if submitted:
             "התאמות_פרטים": adjustments_details.strip(),
             "מוטיבציה_1": m1, "מוטיבציה_2": m2, "מוטיבציה_3": m3,
         }
-        # דירוגים
         row.update({f"דירוג_{k}": v for k,v in ranks.items()})
 
         try:
-            append_row(row, CSV_FILE)
-            st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
-            
+            # 1) עדכון הקובץ הראשי (מצטבר) – ללא מחיקה, שמירה אטומית + גיבוי
+            master_df = load_df(CSV_MASTER)
+            master_df = pd.concat([master_df, pd.DataFrame([row])], ignore_index=True)
+            save_master_atomically(master_df)
+
+            # 2) רישום תמידי ליומן (Append-Only)
+            append_to_log(pd.DataFrame([row]))
+
+            st.success("✅ הטופס נשלח ונשמר בהצלחה! (כולל יומן וגיבוי מתוארך)")
+            st.info("טיפ: לצפייה/הורדה של הנתונים, הוסיפו לכתובת האתר ?admin=1 והיכנסו עם סיסמת המנהל.")
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
