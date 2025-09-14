@@ -376,7 +376,6 @@ if submitted:
             master_df = pd.concat([master_df, pd.DataFrame([row])], ignore_index=True)
             save_master_atomically(master_df)
             append_to_log(pd.DataFrame([row]))
-            st.success("✅ הטופס נשלח ונשמר בהצלחה! (כולל יומן וגיבוי)")
-            st.info("לצפייה/הורדה כ־XLSX: הוסיפו לכתובת ?admin=1 והיכנסו עם סיסמת המנהל.")
+            st.success("✅ הטופס נשלח ונשמר בהצלחה! ")
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
