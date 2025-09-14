@@ -237,6 +237,7 @@ with tab1:
 
 # --- סעיף 2 ---
 with tab2:
+  
     st.subheader("העדפת שיבוץ")
     prev_training = st.selectbox("האם עברת הכשרה מעשית בשנה קודמת? *", ["כן","לא","אחר..."])
     prev_place=prev_mentor=prev_partner=""
