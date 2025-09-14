@@ -14,13 +14,12 @@ import pandas as pd
 # =========================
 st.set_page_config(page_title="שאלון שיבוץ סטודנטים – תשפ״ו", layout="centered")
 
-# ====== עיצוב מודרני + RTL + הסתרת "Press Enter to apply" ======
+# ====== עיצוב מודרני + RTL ======
 st.markdown("""
 <style>
 @font-face { font-family:'David'; src:url('https://example.com/David.ttf') format('truetype'); }
 html, body, [class*="css"] { font-family:'David',sans-serif!important; }
 
-/* ====== עיצוב מודרני + RTL ====== */
 :root{
   --bg-1:#e0f7fa; --bg-2:#ede7f6; --bg-3:#fff3e0; --bg-4:#fce4ec; --bg-5:#e8f5e9;
   --ink:#0f172a; --primary:#9b5de5; --primary-700:#f15bb5; --ring:rgba(155,93,229,.35);
@@ -74,17 +73,17 @@ BACKUP_DIR = DATA_DIR / "backups"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_MASTER = DATA_DIR / "שאלון_שיבוץ.csv"         # קובץ ראשי מצטבר (נשמר ומתעדכן)
-CSV_LOG    = DATA_DIR / "שאלון_שיבוץ_log.csv"     # קובץ יומן Append-Only (לעולם לא מוחקים ממנו)
+CSV_MASTER = DATA_DIR / "שאלון_שיבוץ.csv"         # קובץ ראשי מצטבר
+CSV_LOG    = DATA_DIR / "שאלון_שיבוץ_log.csv"     # יומן Append-Only
 
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")  # מומלץ לשים בענן
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")
 
-# מצב מנהל: ?admin=1 (תמיכה בגרסאות שונות של Streamlit)
+# תמיכה בפרמטר admin
 params = st.query_params if hasattr(st, "query_params") else {}
 is_admin_mode = (params.get("admin", "0") == "1") if isinstance(params, dict) else False
 
 # =========================
-# פונקציות עזר לשמירה מתמשכת
+# פונקציות עזר
 # =========================
 def load_df(path: Path) -> pd.DataFrame:
     if path.exists():
@@ -95,15 +94,14 @@ def load_df(path: Path) -> pd.DataFrame:
     return pd.DataFrame()
 
 def save_master_atomically(df: pd.DataFrame) -> None:
-    """שמירה אטומית + גיבוי מתוארך של המסד הראשי (ללא מחיקה של רשומות קיימות)."""
-    tmp = path_tmp = CSV_MASTER.with_suffix(".tmp.csv")
+    tmp = CSV_MASTER.with_suffix(".tmp.csv")
     df.to_csv(tmp, index=False, encoding="utf-8-sig")
     tmp.replace(CSV_MASTER)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    (BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv").write_bytes(CSV_MASTER.read_bytes())
+    backup_path = BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv"
+    df.to_csv(backup_path, index=False, encoding="utf-8-sig")
 
 def append_to_log(row_df: pd.DataFrame) -> None:
-    """כתיבה Append-Only – לא מוחקים, לא עורכים, תמיד מוסיפים שורה חדשה."""
     row_df.to_csv(CSV_LOG, mode="a", index=False, encoding="utf-8-sig", header=not CSV_LOG.exists())
 
 def df_to_excel_bytes(df: pd.DataFrame, sheet: str = "תשובות") -> bytes:
@@ -118,7 +116,7 @@ def df_to_excel_bytes(df: pd.DataFrame, sheet: str = "תשובות") -> bytes:
     return bio.read()
 
 def valid_email(v: str) -> bool:  return bool(re.match(r"^[^@]+@[^@]+\.[^@]+$", v.strip()))
-def valid_phone(v: str) -> bool:  return bool(re.match(r"^0\d{1,2}-?\d{6,7}$", v.strip()))   # 050-1234567 / 04-8123456
+def valid_phone(v: str) -> bool:  return bool(re.match(r"^0\d{1,2}-?\d{6,7}$", v.strip()))
 def valid_id(v: str) -> bool:     return bool(re.match(r"^\d{8,9}$", v.strip()))
 
 def unique_ranks(ranks: dict) -> bool:
@@ -136,10 +134,10 @@ def show_errors(errors: list[str]):
         st.markdown(f"- :red[{e}]")
 
 # =========================
-# עמוד מנהל – צפייה, הורדות, עמידות נתונים
+# עמוד מנהל – XLSX בלבד
 # =========================
 if is_admin_mode:
-    st.title("🔑 גישת מנהל – צפייה והורדות (שמירה ארוכת טווח)")
+    st.title("🔑 גישת מנהל – צפייה והורדות (XLSX)")
     pwd = st.text_input("סיסמת מנהל:", type="password", key="admin_pwd")
     if pwd:
         if pwd == ADMIN_PASSWORD:
@@ -159,21 +157,13 @@ if is_admin_mode:
             st.markdown("### הצגת הקובץ הראשי")
             if not df_master.empty:
                 st.dataframe(df_master, use_container_width=True)
-                with st.expander("📥 הורדות – קובץ ראשי", expanded=True):
-                    st.download_button(
-                        "Excel – כל הנתונים (ראשי)",
-                        data=df_to_excel_bytes(df_master, sheet="Master"),
-                        file_name="שאלון_שיבוץ_ראשי.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key="dl_master_xlsx"
-                    )
-                    st.download_button(
-                        "CSV – כל הנתונים (ראשי)",
-                        data=df_master.to_csv(index=False, encoding="utf-8-sig"),
-                        file_name="שאלון_שיבוץ_ראשי.csv",
-                        mime="text/csv",
-                        key="dl_master_csv"
-                    )
+                st.download_button(
+                    "📊 הורד Excel – קובץ ראשי",
+                    data=df_to_excel_bytes(df_master, sheet="Master"),
+                    file_name="שאלון_שיבוץ_ראשי.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="dl_master_xlsx"
+                )
             else:
                 st.info("אין עדיין נתונים בקובץ הראשי.")
 
@@ -181,21 +171,13 @@ if is_admin_mode:
             st.markdown("### הצגת קובץ היומן (Append-Only)")
             if not df_log.empty:
                 st.dataframe(df_log, use_container_width=True)
-                with st.expander("📥 הורדות – קובץ יומן", expanded=True):
-                    st.download_button(
-                        "Excel – יומן מלא",
-                        data=df_to_excel_bytes(df_log, sheet="Log"),
-                        file_name="שאלון_שיבוץ_יומן.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key="dl_log_xlsx"
-                    )
-                    st.download_button(
-                        "CSV – יומן מלא",
-                        data=df_log.to_csv(index=False, encoding="utf-8-sig"),
-                        file_name="שאלון_שיבוץ_יומן.csv",
-                        mime="text/csv",
-                        key="dl_log_csv"
-                    )
+                st.download_button(
+                    "📊 הורד Excel – קובץ יומן",
+                    data=df_to_excel_bytes(df_log, sheet="Log"),
+                    file_name="שאלון_שיבוץ_יומן.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="dl_log_xlsx"
+                )
             else:
                 st.info("אין עדיין נתונים בקובץ היומן.")
         else:
@@ -203,7 +185,7 @@ if is_admin_mode:
     st.stop()
 
 # =========================
-# שאלון – טאבים (שמירה אוטו’ של הערכים)
+# שאלון – טאבים
 # =========================
 st.title("📋 שאלון שיבוץ סטודנטים – שנת הכשרה תשפ״ו")
 st.caption("התמיכה בקוראי מסך הופעלה.")
@@ -285,8 +267,7 @@ with tab5:
 # --- סעיף 6 (יחיד!) ---
 with tab6:
     st.subheader("סיכום ושליחה")
-    st.markdown("בדקו את התקציר. אם יש טעות – חזרו לטאב המתאים, תקנו וחזרו לכאן. לאחר אישור ולחיצה על **שליחה** המידע יישמר.")
-    # תקציר נעים לקריאה
+    st.markdown("בדקו את התקציר... לאחר אישור ולחיצה על **שליחה** המידע יישמר.")
     st.markdown("### 🧑‍💻 פרטים אישיים")
     st.table(pd.DataFrame([{
         "שם פרטי": first_name, "שם משפחה": last_name, "ת״ז": nat_id, "מין": gender,
@@ -329,11 +310,10 @@ with tab6:
     submitted = st.button("שליחה ✉️")
 
 # =========================
-# ולידציה + שמירה (פועלת פעם אחת כשנלחץ שליחה)
+# ולידציה + שמירה
 # =========================
 if submitted:
     errors=[]
-    # סעיף 1
     if not first_name.strip(): errors.append("סעיף 1: יש למלא שם פרטי.")
     if not last_name.strip():  errors.append("סעיף 1: יש למלא שם משפחה.")
     if not valid_id(nat_id):   errors.append("סעיף 1: ת״ז חייבת להיות 8–9 ספרות.")
@@ -347,7 +327,6 @@ if submitted:
     if not track.strip(): errors.append("סעיף 1: יש למלא מסלול לימודים/תואר.")
     if mobility=="אחר..." and not mobility_other.strip(): errors.append("סעיף 1: יש לפרט ניידות (אחר).")
 
-    # סעיף 2
     if prev_training in ["כן","אחר..."]:
         if not prev_place.strip():  errors.append("סעיף 2: יש למלא מקום/תחום אם הייתה הכשרה קודמת.")
         if not prev_mentor.strip(): errors.append("סעיף 2: יש למלא שם מדריך ומיקום.")
@@ -358,24 +337,16 @@ if submitted:
     if not unique_ranks(ranks): errors.append("סעיף 2: לא ניתן להשתמש באותו דירוג ליותר ממוסד אחד.")
     if not special_request.strip(): errors.append("סעיף 2: יש לציין בקשה מיוחדת (אפשר 'אין').")
 
-    # סעיף 3
     if avg_grade is None or avg_grade <= 0: errors.append("סעיף 3: יש להזין ממוצע ציונים גדול מ-0.")
-
-    # סעיף 4
     if not adjustments: errors.append("סעיף 4: יש לבחור לפחות סוג התאמה אחד (או לציין 'אין').")
     if "אחר..." in adjustments and not adjustments_other.strip(): errors.append("סעיף 4: נבחר 'אחר' – יש לפרט התאמה.")
     if not adjustments_details.strip(): errors.append("סעיף 4: יש לפרט התייחסות להתאמות (אפשר 'אין').")
-
-    # סעיף 5
     if not (m1 and m2 and m3): errors.append("סעיף 5: יש לענות על שלוש שאלות המוטיבציה.")
-
-    # סעיף 6
     if not confirm: errors.append("סעיף 6: יש לאשר את ההצהרה.")
 
     if errors:
         show_errors(errors)
     else:
-        # בניית שורה לשמירה
         row = {
             "תאריך_שליחה": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "שם_פרטי": first_name.strip(), "שם_משפחה": last_name.strip(), "תעודת_זהות": nat_id.strip(),
@@ -401,15 +372,11 @@ if submitted:
         row.update({f"דירוג_{k}": v for k,v in ranks.items()})
 
         try:
-            # 1) עדכון הקובץ הראשי (מצטבר) – ללא מחיקה, שמירה אטומית + גיבוי
             master_df = load_df(CSV_MASTER)
             master_df = pd.concat([master_df, pd.DataFrame([row])], ignore_index=True)
             save_master_atomically(master_df)
-
-            # 2) רישום תמידי ליומן (Append-Only)
             append_to_log(pd.DataFrame([row]))
-
-            st.success("✅ הטופס נשלח ונשמר בהצלחה! (כולל יומן וגיבוי מתוארך)")
-            st.info("טיפ: לצפייה/הורדה של הנתונים, הוסיפו לכתובת האתר ?admin=1 והיכנסו עם סיסמת המנהל.")
+            st.success("✅ הטופס נשלח ונשמר בהצלחה! (כולל יומן וגיבוי)")
+            st.info("לצפייה/הורדה כ־XLSX: הוסיפו לכתובת ?admin=1 והיכנסו עם סיסמת המנהל.")
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
