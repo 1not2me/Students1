@@ -13,7 +13,7 @@ import pandas as pd
 # =========================
 # הגדרות כלליות
 # =========================
-st.set_page_config(page_title="שאלון שיבוץ סטודנטים – תשפ״ו", layout="centered")
+st.set_page_config(page_title="שאלון לסטודנטים – תשפ״ו", layout="centered")
 
 # ====== עיצוב מודרני + RTL ======
 st.markdown("""
