@@ -72,6 +72,7 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
+
 try:
     creds_dict = st.secrets["google_service_account"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
@@ -81,28 +82,41 @@ except Exception as e:
     sheet = None
     st.error(f"⚠ לא ניתן להתחבר ל־ Google Sheets: {e}")
 
-# =========================
-# פונקציות עזר
-# =========================
-def load_csv_safely(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        return pd.DataFrame()
-    attempts = [
-        dict(encoding="utf-8-sig"),
-        dict(encoding="utf-8"),
-        dict(encoding="utf-8-sig", engine="python", on_bad_lines="skip"),
-        dict(encoding="utf-8", engine="python", on_bad_lines="skip"),
-        dict(encoding="latin-1", engine="python", on_bad_lines="skip"),
-    ]
-    for kw in attempts:
-        try:
-            df = pd.read_csv(path, **kw)
-            df.columns = [c.replace("\ufeff", "").strip() for c in df.columns]
-            return df
-        except Exception:
-            continue
-    return pd.DataFrame()
 
+# =========================
+# אתחול כותרות ל-Google Sheets
+# =========================
+def init_google_sheet():
+    if sheet:
+        try:
+            headers = sheet.row_values(1)
+            if not headers:
+                default_headers = [
+                    "תאריך_שליחה","שם_פרטי","שם_משפחה","תעודת_זהות","מין",
+                    "שיוך_חברתי","שפת_אם","שפות_נוספות","טלפון","כתובת","אימייל",
+                    "שנת_לימודים","מסלול_לימודים","ניידות",
+                    "הכשרה_קודמת","הכשרה_קודמת_מקום_ותחום","הכשרה_קודמת_מדריך_ומיקום","הכשרה_קודמת_בן_זוג",
+                    "תחומים_מועדפים","תחום_מוביל","בקשה_מיוחדת","ממוצע",
+                    "התאמות","התאמות_פרטים",
+                    "מוטיבציה_1","מוטיבציה_2","מוטיבציה_3",
+                    "דירוג_מדרגה_1_מוסד","דירוג_מדרגה_2_מוסד","דירוג_מדרגה_3_מוסד"
+                ]
+                # אפשר להוסיף גם את כל השדות של SITES:
+                for s in SITES:
+                    default_headers.append(f"דירוג_{s}")
+
+                sheet.append_row(default_headers)
+        except Exception as e:
+            st.error(f"⚠ שגיאה באתחול כותרות Google Sheets: {e}")
+
+
+# לקרוא לפונקציית האתחול מיד אחרי שהתחברת
+init_google_sheet()
+
+
+# =========================
+# שמירה (CSV + Google Sheets)
+# =========================
 def save_master_dataframe(new_row: dict) -> None:
     df_master = load_csv_safely(CSV_FILE)
     df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
@@ -125,17 +139,18 @@ def save_master_dataframe(new_row: dict) -> None:
     if sheet:
         try:
             headers = sheet.row_values(1)
-            # אם אין כותרות – נכניס קודם את כל ה־keys
             if not headers:
+                # אם משום מה אין כותרות – נכניס אותן מחדש
                 sheet.append_row(list(new_row.keys()))
                 headers = list(new_row.keys())
 
-            # נבנה שורה לפי סדר הכותרות
+            # יצירת שורה לפי סדר הכותרות
             row = [new_row.get(h, "") for h in headers]
             sheet.append_row(row, value_input_option="USER_ENTERED")
 
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
+
 
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
