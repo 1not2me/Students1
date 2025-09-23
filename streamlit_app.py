@@ -453,7 +453,7 @@ if submitted:
     if not confirm:
         errors.append("סעיף 6: יש לאשר את ההצהרה.")
 
-    if errors:
+        if errors:
         show_errors(errors)
     else:
         # מפות דירוג לשמירה
@@ -462,7 +462,7 @@ if submitted:
             site = st.session_state.get(f"rank_{i}")
             site_to_rank[site] = i
 
-        # בניית שורה לשמירה (שימי לב: אין שבירת מחרוזות בעברית)
+        # בניית שורה לשמירה
         row = {
             "תאריך_שליחה": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "שם_פרטי": first_name.strip(),
@@ -471,7 +471,8 @@ if submitted:
             "מין": gender,
             "שיוך_חברתי": social_affil,
             "שפת_אם": (other_mt.strip() if mother_tongue == "אחר..." else mother_tongue),
-            "שפות_נוספות": "; ".join([x for x in extra_langs if x != "אחר..."] + ([extra_langs_other.strip()] if "אחר..." in extra_langs else [])),
+            "שפות_נוספות": "; ".join([x for x in extra_langs if x != "אחר..."] +
+                                     ([extra_langs_other.strip()] if "אחר..." in extra_langs else [])),
             "טלפון": phone.strip(),
             "כתובת": address.strip(),
             "אימייל": email.strip(),
@@ -482,32 +483,29 @@ if submitted:
             "הכשרה_קודמת_מקום_ותחום": prev_place.strip(),
             "הכשרה_קודמת_מדריך_ומיקום": prev_mentor.strip(),
             "הכשרה_קודמת_בן_זוג": prev_partner.strip(),
-            "תחומים_מועדפים": "; ".join([d for d in chosen_domains if d != "אחר..."] + ([domains_other.strip()] if "אחר..." in chosen_domains else [])),
+            "תחומים_מועדפים": "; ".join([d for d in chosen_domains if d != "אחר..."] +
+                                       ([domains_other.strip()] if "אחר..." in chosen_domains else [])),
             "תחום_מוביל": (top_domain if top_domain and top_domain != "— בחר/י —" else ""),
             "בקשה_מיוחדת": special_request.strip(),
             "ממוצע": avg_grade,
-            "התאמות": "; ".join([a for a in adjustments if a != "אחר..."] + ([adjustments_other.strip()] if "אחר..." in adjustments else [])),
+            "התאמות": "; ".join([a for a in adjustments if a != "אחר..."] +
+                                ([adjustments_other.strip()] if "אחר..." in adjustments else [])),
             "התאמות_פרטים": adjustments_details.strip(),
             "מוטיבציה_1": m1,
             "מוטיבציה_2": m2,
             "מוטיבציה_3": m3,
         }
 
-        # הוספת שדות דירוג:
-        # 1) Rank_i -> Site (מוסד שנבחר לכל מדרגה)
+        # הוספת שדות דירוג
         for i in range(1, RANK_COUNT + 1):
             row[f"דירוג_מדרגה_{i}_מוסד"] = st.session_state.get(f"rank_{i}")
-        # 2) Site -> Rank (לשימוש נוח ב-Excel)
         for s in SITES:
             row[f"דירוג_{s}"] = site_to_rank[s]
 
-  if submitted:
-    if errors:
-        show_errors(errors)
-    else:
+        # ✅ שמירה (בתוך אותו בלוק)
         try:
-            save_master_dataframe(row)                 # מאסטר מצטבר
-            append_to_log(pd.DataFrame([row]))         # יומן Append-Only
+            save_master_dataframe(row)
+            append_to_log(pd.DataFrame([row]))
             st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
