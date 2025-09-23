@@ -79,7 +79,7 @@ try:
     sheet = gclient.open_by_key(SHEET_ID).sheet1
 except Exception as e:
     sheet = None
-    st.error(f"⚠ לא ניתן להתחבר ל־ Google Sheets: {e}")
+    st.error(f"⚠ לא ניתן להתחבר ל־Google Sheets: {e}")
 
 # =========================
 # פונקציות עזר
