@@ -121,6 +121,18 @@ def save_master_dataframe(new_row: dict) -> None:
         quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
     )
 
+    # ✅ שמירה גם ל־Google Sheets
+    if sheet:
+        try:
+            existing = sheet.get_all_values()
+            if not existing:
+                # אם הגיליון ריק – מוסיפים כותרות
+                sheet.append_row(list(new_row.keys()))
+            # מוסיפים תמיד שורה חדשה
+            sheet.append_row(list(new_row.values()))
+        except Exception as e:
+            st.error(f"❌ לא ניתן לשמור ב־ Google Sheets: {e}")
+
     # שמירה גם ל־Google Sheets
     if sheet:
         try:
