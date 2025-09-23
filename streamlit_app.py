@@ -131,9 +131,9 @@ def save_master_dataframe(new_row: dict) -> None:
             values  = list(new_row.values())
 
             # אם זה קובץ חדש – נכניס כותרות
-            if len(sheet.get_all_values()) == 0:
+        if len(sheet.get_all_values()) == 0:
     # אם אין בכלל נתונים, מוסיפים כותרות בשורה ראשונה
-    sheet.insert_row(headers, 1)
+           sheet.insert_row(headers, 1)
 
 # מוסיפים את הערכים תמיד לשורה חדשה מתחת לאחרון
 sheet.append_row(values, value_input_option="USER_ENTERED", table_range="A2:ZZ2")
