@@ -77,7 +77,7 @@ try:
     creds_dict = st.secrets["google_service_account"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     gclient = gspread.authorize(creds)
-    sheet = gclient.open_by_key(SHEET_ID).worksheet("StudentPlacement")
+    sheet = gclient.open_by_key(SHEET_ID).sheet1
 except Exception as e:
     sheet = None
     st.error(f"⚠ לא ניתן להתחבר ל־Google Sheets: {e}")
@@ -139,7 +139,7 @@ def save_master_dataframe(new_row: dict) -> None:
               sheet.append_row(values, value_input_option="USER_ENTERED", table_range="A2:ZZ2")
 
         except Exception as e:
-            st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
+            st.error(f"❌ לא ניתן לשמור ב־ Google Sheets: {e}")
 
 
 def append_to_log(row_df: pd.DataFrame) -> None:
