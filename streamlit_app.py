@@ -119,16 +119,6 @@ def save_to_gsheet(new_row: dict):
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
 
-
-    # שמירה גם ל־Google Sheets
-   if sheet:
-    try:
-        if len(sheet.get_all_values()) == 0:
-            sheet.append_row(list(new_row.keys()))
-        sheet.append_row(list(new_row.values()))
-    except Exception as e:
-        st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
-
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
     row_df.to_csv(CSV_LOG_FILE, mode="a", header=not file_exists,
