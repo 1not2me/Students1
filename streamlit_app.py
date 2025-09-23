@@ -5,7 +5,7 @@ import re
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime
-import pytz
+
 import streamlit as st
 import pandas as pd
 
@@ -157,7 +157,7 @@ COLUMNS_ORDER = [
 ] + [f"דירוג_מדרגה_{i}_מוסד" for i in range(1, RANK_COUNT+1)] + [f"דירוג_{s}" for s in SITES]
 
 # =========================
-# פונקציה לשמירה (כולל כותרות קבועות + תאריך ישראלי)
+# פונקציה לשמירה (כולל כותרות קבועות)
 # =========================
 def save_master_dataframe(new_row: dict) -> None:
     # --- שמירה מקומית ---
@@ -183,11 +183,6 @@ def save_master_dataframe(new_row: dict) -> None:
             row_values = [new_row.get(col, "") for col in COLUMNS_ORDER]
             sheet.append_row(row_values, value_input_option="USER_ENTERED")
 
-            # פורמט עמודת תאריך
-            sheet.format("A2:A", {
-                "numberFormat": {"type": "DATE_TIME", "pattern": "dd/MM/yyyy HH:mm:ss"}
-            })
-
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
 
@@ -196,7 +191,6 @@ def append_to_log(row_df: pd.DataFrame) -> None:
     row_df.to_csv(CSV_LOG_FILE, mode="a", header=not file_exists,
                   index=False, encoding="utf-8-sig",
                   quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n")
-
   # =========================
 # מצב מנהל
 # =========================
@@ -538,4 +532,3 @@ if submitted:
             st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
-
