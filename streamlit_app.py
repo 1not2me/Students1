@@ -103,42 +103,43 @@ def load_csv_safely(path: Path) -> pd.DataFrame:
             continue
     return pd.DataFrame()
 
+# רשימת כותרות קבועה מראש (כמו בקובץ הדוגמה שלך)
+HEADERS = [
+    "תאריך_שליחה", "שם_פרטי", "שם_משפחה", "תעודת_זהות", "מין",
+    "שיוך_חברתי", "שפת_אם", "שפות_נוספות", "טלפון", "כתובת",
+    "אימייל", "שנת_לימודים", "מסלול_לימודים", "ניידות",
+    "הכשרה_קודמת", "הכשרה_קודמת_מקום_ותחום", "הכשרה_קודמת_מדריך_ומיקום",
+    "הכשרה_קודמת_בן_זוג", "תחומים_מועדפים", "תחום_מוביל",
+    "בקשה_מיוחדת", "ממוצע", "התאמות", "התאמות_פרטים",
+    "מוטיבציה_1", "מוטיבציה_2", "מוטיבציה_3",
+    "דירוג_מדרגה_1_מוסד", "דירוג_מדרגה_2_מוסד", "דירוג_מדרגה_3_מוסד",
+    # כאן ממשיכים עם כל מוסדות הדירוג כמו בקובץ...
+]
+
 def save_master_dataframe(new_row: dict) -> None:
-    # --- שמירה לקובץ מקומי (CSV + גיבוי) ---
     df_master = load_csv_safely(CSV_FILE)
     df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
 
     tmp = CSV_FILE.with_suffix(".tmp.csv")
-    df_master.to_csv(
-        tmp, index=False, encoding="utf-8-sig",
-        quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
-    )
+    df_master.to_csv(tmp, index=False, encoding="utf-8-sig",
+                     quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n")
     tmp.replace(CSV_FILE)
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv"
-    df_master.to_csv(
-        backup_path, index=False, encoding="utf-8-sig",
-        quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
-    )
+    df_master.to_csv(backup_path, index=False, encoding="utf-8-sig",
+                     quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n")
 
-    # --- שמירה ל-Google Sheets ---
+    # ✅ שמירה ל־Google Sheets
     if sheet:
         try:
-            # טוענים כותרות מהקובץ students_sample.xlsx
-            sample_headers = list(pd.read_excel("students_sample.xlsx").columns)
-
             existing = sheet.get_all_values()
             if not existing:
-                # אם הגיליון ריק – מוסיפים כותרות מהקובץ
-                sheet.append_row(sample_headers)
-
-            # ממפים ערכים לפי סדר הכותרות
-            row_to_add = [new_row.get(col, "") for col in sample_headers]
-
-            # מוסיפים את השורה
-            sheet.append_row(row_to_add)
-
+                # אם ריק – כותבים את הכותרות המוגדרות מראש
+                sheet.append_row(HEADERS)
+            # בונים שורה חדשה לפי סדר העמודות
+            row = [new_row.get(h, "") for h in HEADERS]
+            sheet.append_row(row)
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
 
