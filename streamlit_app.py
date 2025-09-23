@@ -453,7 +453,7 @@ if submitted:
     if not confirm:
         errors.append("סעיף 6: יש לאשר את ההצהרה.")
 
-        if errors:
+    if errors:
         show_errors(errors)
     else:
         # מפות דירוג לשמירה
