@@ -160,7 +160,7 @@ def show_errors(errors: list[str]):
     st.markdown("### :red[נמצאו שגיאות:]")
     for e in errors:
         st.markdown(f"- :red[{e}]")
-          if errors:
+    if errors:
         show_errors(errors)
     else:
         # מפות דירוג לשמירה
