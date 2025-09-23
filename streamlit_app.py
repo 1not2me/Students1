@@ -65,7 +65,7 @@ is_admin_mode = query_params.get("admin", ["0"])[0] == "1"
 # =========================
 # Google Sheets הגדרות
 # =========================
-SHEET_ID = st.secrets.get("SHEET_ID", "הדביקי_כאן_את_ID_שלך")
+SHEET_ID = st.secrets.get("SHEET_ID", "1HBi9K4Sh06Xqw1TmHQSL0w2MQVbgfRbTyvMSspYTYf4")
 
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
