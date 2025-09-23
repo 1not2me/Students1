@@ -103,7 +103,7 @@ def load_csv_safely(path: Path) -> pd.DataFrame:
             continue
     return pd.DataFrame()
 
-ddef save_master_dataframe(new_row: dict) -> None:
+def save_master_dataframe(new_row: dict) -> None:
     # מיפוי שמות עמודות יפים
     col_map = {
         "תאריך_שליחה": "תאריך שליחה",
