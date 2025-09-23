@@ -104,9 +104,48 @@ def load_csv_safely(path: Path) -> pd.DataFrame:
     return pd.DataFrame()
 
 def save_master_dataframe(new_row: dict) -> None:
-    df_master = load_csv_safely(CSV_FILE)
-    df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
+    # מיפוי שמות עמודות יפים
+    col_map = {
+        "תאריך_שליחה": "תאריך שליחה",
+        "שם_פרטי": "שם פרטי",
+        "שם_משפחה": "שם משפחה",
+        "תעודת_זהות": "תעודת זהות",
+        "מין": "מין",
+        "שיוך_חברתי": "שיוך חברתי",
+        "שפת_אם": "שפת אם",
+        "שפות_נוספות": "שפות נוספות",
+        "טלפון": "טלפון",
+        "כתובת": "כתובת",
+        "אימייל": "אימייל",
+        "שנת_לימודים": "שנת לימודים",
+        "מסלול_לימודים": "מסלול לימודים",
+        "ניידות": "ניידות",
+        "הכשרה_קודמת": "הכשרה קודמת",
+        "תחומים_מועדפים": "תחומים מועדפים",
+        "תחום_מוביל": "תחום מוביל",
+        "בקשה_מיוחדת": "בקשה מיוחדת",
+        "ממוצע": "ממוצע ציונים",
+        "התאמות": "התאמות",
+        "התאמות_פרטים": "פירוט התאמות",
+        "מוטיבציה_1": "מוטיבציה – השקעת מאמץ",
+        "מוטיבציה_2": "מוטיבציה – חשיבות ההכשרה",
+        "מוטיבציה_3": "מוטיבציה – התמדה",
+    }
 
+    # גם כל עמודות הדירוג יכנסו בצורה יפה
+    for i in range(1, RANK_COUNT + 1):
+        col_map[f"דירוג_מדרגה_{i}_מוסד"] = f"דירוג {i} – מוסד"
+    for s in SITES:
+        col_map[f"דירוג_{s}"] = f"דירוג {s}"
+
+    # טען מאסטר קיים
+    df_master = load_csv_safely(CSV_FILE)
+
+    # הוספה ושינוי שמות עמודות
+    df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
+    df_master.rename(columns=col_map, inplace=True)
+
+    # שמירה לקובץ CSV (מסודר)
     tmp = CSV_FILE.with_suffix(".tmp.csv")
     df_master.to_csv(
         tmp, index=False, encoding="utf-8-sig",
@@ -114,12 +153,25 @@ def save_master_dataframe(new_row: dict) -> None:
     )
     tmp.replace(CSV_FILE)
 
+    # שמירת גיבוי
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv"
-    df_master.to_csv(
-        backup_path, index=False, encoding="utf-8-sig",
-        quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
-    )
+    df_master.to_csv(backup_path, index=False, encoding="utf-8-sig")
+
+    # שמירה גם ל־Google Sheets
+        # שמירה גם ל־Google Sheets
+    if sheet:
+        try:
+            if len(sheet.get_all_values()) == 0:
+                # שלח כותרות יפות
+                sheet.append_row(df_master.columns.tolist())
+            
+            # שלח את הערכים בדיוק לפי סדר העמודות
+            sheet.append_row([df_master.iloc[-1][col] for col in df_master.columns])
+        except Exception as e:
+            st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
+
+
 
     # שמירה גם ל־Google Sheets
     if sheet:
