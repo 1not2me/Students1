@@ -136,7 +136,7 @@ def save_master_dataframe(new_row: dict) -> None:
               sheet.insert_row(headers, 1)
 
 # מוסיפים את הערכים תמיד לשורה חדשה מתחת לאחרון
-sheet.append_row(values, value_input_option="USER_ENTERED", table_range="A2:ZZ2")
+              sheet.append_row(values, value_input_option="USER_ENTERED", table_range="A2:ZZ2")
 
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
