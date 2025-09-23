@@ -2,4 +2,6 @@ streamlit
 pandas
 gspread
 google-auth
-xlsxwriter
+google-auth-oauthlib
+google-auth-httplib2
+pytz
