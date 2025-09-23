@@ -104,6 +104,7 @@ def load_csv_safely(path: Path) -> pd.DataFrame:
     return pd.DataFrame()
 
 def save_master_dataframe(new_row: dict) -> None:
+    # --- שמירה לקובץ מקומי (CSV + גיבוי) ---
     df_master = load_csv_safely(CSV_FILE)
     df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
 
@@ -121,26 +122,26 @@ def save_master_dataframe(new_row: dict) -> None:
         quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
     )
 
-    # ✅ שמירה גם ל־Google Sheets
+    # --- שמירה ל-Google Sheets ---
     if sheet:
         try:
+            # טוענים כותרות מהקובץ students_sample.xlsx
+            sample_headers = list(pd.read_excel("students_sample.xlsx").columns)
+
             existing = sheet.get_all_values()
             if not existing:
-                # אם הגיליון ריק – מוסיפים כותרות
-                sheet.append_row(list(new_row.keys()))
-            # מוסיפים תמיד שורה חדשה
-            sheet.append_row(list(new_row.values()))
-        except Exception as e:
-            st.error(f"❌ לא ניתן לשמור ב־ Google Sheets: {e}")
+                # אם הגיליון ריק – מוסיפים כותרות מהקובץ
+                sheet.append_row(sample_headers)
 
-    # שמירה גם ל־Google Sheets
-    if sheet:
-        try:
-            if len(sheet.get_all_values()) == 0:
-                sheet.append_row(list(new_row.keys()))
-            sheet.append_row(list(new_row.values()))
+            # ממפים ערכים לפי סדר הכותרות
+            row_to_add = [new_row.get(col, "") for col in sample_headers]
+
+            # מוסיפים את השורה
+            sheet.append_row(row_to_add)
+
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
+
 
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
