@@ -103,21 +103,40 @@ def load_csv_safely(path: Path) -> pd.DataFrame:
             continue
     return pd.DataFrame()
 
-def save_to_gsheet(new_row: dict):
+def save_master_dataframe(new_row: dict) -> None:
+    df_master = load_csv_safely(CSV_FILE)
+    df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
+
+    tmp = CSV_FILE.with_suffix(".tmp.csv")
+    df_master.to_csv(
+        tmp, index=False, encoding="utf-8-sig",
+        quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
+    )
+    tmp.replace(CSV_FILE)
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv"
+    df_master.to_csv(
+        backup_path, index=False, encoding="utf-8-sig",
+        quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
+    )
+
+    # שמירה גם ל־Google Sheets
     if sheet:
         try:
             headers = sheet.row_values(1)
-            # אם אין כותרות בכלל – ניצור אותן
+            # אם אין כותרות – נוסיף אותן
             if not headers:
                 sheet.append_row(list(new_row.keys()))
                 headers = list(new_row.keys())
 
-            # נבנה שורה חדשה בדיוק לפי סדר הכותרות
+            # בניית שורה לפי סדר הכותרות
             row = [new_row.get(h, "") for h in headers]
             sheet.append_row(row, value_input_option="USER_ENTERED")
 
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
+
 
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
