@@ -124,13 +124,21 @@ def save_master_dataframe(new_row: dict) -> None:
     )
 
     # שמירה גם ל־Google Sheets
+        # שמירה גם ל־Google Sheets
     if sheet:
         try:
+            headers = list(new_row.keys())
+            values  = list(new_row.values())
+
+            # אם זה קובץ חדש – נכניס כותרות
             if len(sheet.get_all_values()) == 0:
-                sheet.append_row(list(new_row.keys()))
-            sheet.append_row(list(new_row.values()))
+                sheet.insert_row(headers, 1)
+
+            # נוסיף את הערכים תמיד בשורה חדשה
+            sheet.append_row(values, value_input_option="USER_ENTERED")
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
+
 
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
