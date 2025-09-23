@@ -123,7 +123,7 @@ def save_master_dataframe(new_row: dict) -> None:
         quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
     )
 
-     if sheet:
+    if sheet:
         try:
             if len(sheet.get_all_values()) == 0:
                 sheet.append_row(list(new_row.keys()))
