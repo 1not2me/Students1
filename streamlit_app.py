@@ -171,13 +171,21 @@ def save_master_dataframe(new_row: dict) -> None:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
 
     # שמירה גם ל־Google Sheets
-    if sheet:
-        try:
-            if len(sheet.get_all_values()) == 0:
-                sheet.append_row(list(new_row.keys()))
-            sheet.append_row(list(new_row.values()))
-        except Exception as e:
-            st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
+    # שמירה גם ל־Google Sheets
+if sheet:
+    try:
+        # אם הגיליון ריק – מוסיפים כותרות
+        if len(sheet.get_all_values()) == 0:
+            sheet.append_row(df_master.columns.tolist())
+
+        # הוספת השורה האחרונה שנוספה ל־DataFrame
+        last_row = df_master.iloc[-1].astype(str).tolist()
+        sheet.append_row(last_row)
+
+        st.success("✅ הנתונים נשמרו בהצלחה גם ב־Google Sheets")
+    except Exception as e:
+        st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
+
 
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
