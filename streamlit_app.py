@@ -81,6 +81,28 @@ try:
 except Exception as e:
     sheet = None
     st.error(f"⚠ לא ניתן להתחבר ל־ Google Sheets: {e}")
+# =========================
+# פונקציות עזר
+# =========================
+def load_csv_safely(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    attempts = [
+        dict(encoding="utf-8-sig"),
+        dict(encoding="utf-8"),
+        dict(encoding="utf-8-sig", engine="python", on_bad_lines="skip"),
+        dict(encoding="utf-8", engine="python", on_bad_lines="skip"),
+        dict(encoding="latin-1", engine="python", on_bad_lines="skip"),
+    ]
+    for kw in attempts:
+        try:
+            df = pd.read_csv(path, **kw)
+            df.columns = [c.replace("\ufeff", "").strip() for c in df.columns]
+            return df
+        except Exception:
+            continue
+    return pd.DataFrame()
+
 
 
 # =========================
