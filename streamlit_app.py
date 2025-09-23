@@ -103,6 +103,25 @@ def load_csv_safely(path: Path) -> pd.DataFrame:
             continue
     return pd.DataFrame()
 
+# =========================
+# סדר עמודות קבוע ל-Google Sheets
+# =========================
+COLUMNS_ORDER = [
+    "תאריך_שליחה", "שם_פרטי", "שם_משפחה", "תעודת_זהות", "מין", "שיוך_חברתי",
+    "שפת_אם", "שפות_נוספות", "טלפון", "כתובת", "אימייל",
+    "שנת_לימודים", "מסלול_לימודים", "ניידות",
+    "הכשרה_קודמת", "הכשרה_קודמת_מקום_ותחום",
+    "הכשרה_קודמת_מדריך_ומיקום", "הכשרה_קודמת_בן_זוג",
+    "תחומים_מועדפים", "תחום_מוביל", "בקשה_מיוחדת",
+    "ממוצע", "התאמות", "התאמות_פרטים",
+    "מוטיבציה_1", "מוטיבציה_2", "מוטיבציה_3",
+    # עמודות הדירוג
+    "דירוג_מדרגה_1_מוסד", "דירוג_מדרגה_2_מוסד", "דירוג_מדרגה_3_מוסד"
+] + [f"דירוג_{s}" for s in SITES]
+
+# =========================
+# פונקציה לשמירה (עודכנה)
+# =========================
 def save_master_dataframe(new_row: dict) -> None:
     df_master = load_csv_safely(CSV_FILE)
     df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
@@ -125,14 +144,13 @@ def save_master_dataframe(new_row: dict) -> None:
     # --- שמירה גם ל־Google Sheets ---
     if sheet:
         try:
-            headers = sheet.row_values(1)
-            if not headers:  # אם אין כותרות בכלל
-                headers = list(new_row.keys())
-                sheet.append_row(headers)  # שורת כותרות
+            existing_headers = sheet.row_values(1)
+            if not existing_headers or existing_headers != COLUMNS_ORDER:
+                sheet.clear()
+                sheet.append_row(COLUMNS_ORDER, value_input_option="USER_ENTERED")
 
-            # עכשיו נכניס ערכים לפי סדר הכותרות
-            row = [new_row.get(h, "") for h in headers]
-            sheet.append_row(row, value_input_option="USER_ENTERED")
+            row_values = [new_row.get(col, "") for col in COLUMNS_ORDER]
+            sheet.append_row(row_values, value_input_option="USER_ENTERED")
 
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
