@@ -1,5 +1,3 @@
-# streamlit_app.py
-# -*- coding: utf-8 -*-
 import csv
 import re
 from io import BytesIO
@@ -9,9 +7,10 @@ from datetime import datetime
 import streamlit as st
 import pandas as pd
 
-# ===== ספריות ל-Google Sheets =====
+# --- Google Sheets
 import gspread
 from google.oauth2.service_account import Credentials
+import json
 
 # =========================
 # הגדרות כלליות
@@ -57,36 +56,35 @@ BACKUP_DIR = DATA_DIR / "backups"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_FILE      = DATA_DIR / "שאלון_שיבוץ.csv"         # קובץ ראשי (מצטבר, לעולם לא מתאפס)
-CSV_LOG_FILE  = DATA_DIR / "שאלון_שיבוץ_log.csv"     # יומן הוספות (Append-Only)
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")  # מומלץ לשים ב-secrets
+CSV_FILE      = DATA_DIR / "שאלון_שיבוץ.csv"
+CSV_LOG_FILE  = DATA_DIR / "שאלון_שיבוץ_log.csv"
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")
 
 query_params = st.query_params
 is_admin_mode = query_params.get("admin", ["0"])[0] == "1"
 
 # =========================
-# חיבור ל-Google Sheets
+# Google Sheets הגדרות
 # =========================
+SHEET_ID = st.secrets.get("SHEET_ID", "הדביקי_כאן_את_ID_שלך")
+
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
-creds = Credentials.from_service_account_file(
-    "gen-lang-client-0300804242-9b94a4c94055.json", scopes=scope
-)
-client = gspread.authorize(creds)
 
-SHEET_ID = "הדביקי_כאן_את_ה-ID_שלך"  # 📌 לשים כאן את ה-ID מה-URL של ה-Google Sheet
-sheet = client.open_by_key(SHEET_ID).sheet1
-
-def save_to_google_sheets(row: dict):
-    try:
-        sheet.append_row(list(row.values()))
-    except Exception as e:
-        st.error(f"❌ שמירה ל-Google Sheets נכשלה: {e}")
+# שימוש ב-Secrets במקום קובץ JSON
+try:
+    creds_dict = st.secrets["google_service_account"]
+    creds = Credentials.from_service_account_info(dict(creds_dict), scopes=scope)
+    gclient = gspread.authorize(creds)
+    sheet = gclient.open_by_key(SHEET_ID).sheet1
+except Exception as e:
+    sheet = None
+    st.error(f"⚠ לא ניתן להתחבר ל־Google Sheets: {e}")
 
 # =========================
-# פונקציות עזר (קבצים/ולידציה/ייצוא)
+# פונקציות עזר
 # =========================
 def load_csv_safely(path: Path) -> pd.DataFrame:
     if not path.exists():
@@ -125,6 +123,13 @@ def save_master_dataframe(new_row: dict) -> None:
         quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
     )
 
+    # שמירה גם ל־Google Sheets
+    if sheet:
+        try:
+            sheet.append_row(list(new_row.values()))
+        except Exception as e:
+            st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
+
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
     row_df.to_csv(CSV_LOG_FILE, mode="a", header=not file_exists,
@@ -153,7 +158,6 @@ def show_errors(errors: list[str]):
     st.markdown("### :red[נמצאו שגיאות:]")
     for e in errors:
         st.markdown(f"- :red[{e}]")
-
 # =========================
 # מצב מנהל
 # =========================
