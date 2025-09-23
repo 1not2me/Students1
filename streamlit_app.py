@@ -10,7 +10,6 @@ import pandas as pd
 # --- Google Sheets
 import gspread
 from google.oauth2.service_account import Credentials
-import json
 
 # =========================
 # הגדרות כלליות
@@ -73,7 +72,6 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-# שימוש ב-Secrets במקום קובץ JSON
 try:
     creds_dict = st.secrets["google_service_account"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
@@ -126,10 +124,8 @@ def save_master_dataframe(new_row: dict) -> None:
     # שמירה גם ל־Google Sheets
     if sheet:
         try:
-            # אם הגיליון ריק – הוסף כותרות
             if len(sheet.get_all_values()) == 0:
                 sheet.append_row(list(new_row.keys()))
-            # הוספת הנתונים
             sheet.append_row(list(new_row.values()))
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
@@ -223,8 +219,8 @@ if is_admin_mode:
     st.stop()
 
 # =========================
-# רשימת שירותים לדירוג — מוגבל ל-3
-# =========================
+# כאן נכנסים ה־TABS וכל השדות (tab1–tab6, הולידציה, ושליחה)
+
 SITES = [
     "כפר הילדים חורפיש",
     "אנוש כרמיאל",
