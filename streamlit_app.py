@@ -523,14 +523,13 @@ if submitted:
             row[f"דירוג_{s}"] = site_to_rank[s]
 
         try:
-            # 1) מאסטר מצטבר (Load+Concat) – לא מתאפס לעולם
-            df_master = load_csv_safely(CSV_FILE)
-            df_master = pd.concat([df_master, pd.DataFrame([row])], ignore_index=True)
-            save_master_dataframe(df_master)
+            # שמירה במאסטר + Google Sheets
+            save_master_dataframe(row)
 
-            # 2) יומן Append-Only
+            # יומן Append-Only
             append_to_log(pd.DataFrame([row]))
 
             st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
+
