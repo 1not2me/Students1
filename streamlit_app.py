@@ -9,6 +9,10 @@ from datetime import datetime
 import streamlit as st
 import pandas as pd
 
+# ===== ספריות ל-Google Sheets =====
+import gspread
+from google.oauth2.service_account import Credentials
+
 # =========================
 # הגדרות כלליות
 # =========================
@@ -61,6 +65,27 @@ query_params = st.query_params
 is_admin_mode = query_params.get("admin", ["0"])[0] == "1"
 
 # =========================
+# חיבור ל-Google Sheets
+# =========================
+scope = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+creds = Credentials.from_service_account_file(
+    "gen-lang-client-0300804242-9b94a4c94055.json", scopes=scope
+)
+client = gspread.authorize(creds)
+
+SHEET_ID = "הדביקי_כאן_את_ה-ID_שלך"  # 📌 לשים כאן את ה-ID מה-URL של ה-Google Sheet
+sheet = client.open_by_key(SHEET_ID).sheet1
+
+def save_to_google_sheets(row: dict):
+    try:
+        sheet.append_row(list(row.values()))
+    except Exception as e:
+        st.error(f"❌ שמירה ל-Google Sheets נכשלה: {e}")
+
+# =========================
 # פונקציות עזר (קבצים/ולידציה/ייצוא)
 # =========================
 def load_csv_safely(path: Path) -> pd.DataFrame:
@@ -83,13 +108,9 @@ def load_csv_safely(path: Path) -> pd.DataFrame:
     return pd.DataFrame()
 
 def save_master_dataframe(new_row: dict) -> None:
-    # טען את המאסטר הקיים אם יש
     df_master = load_csv_safely(CSV_FILE)
-
-    # הוסף את השורה החדשה
     df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
 
-    # שמירה על הקובץ הראשי
     tmp = CSV_FILE.with_suffix(".tmp.csv")
     df_master.to_csv(
         tmp, index=False, encoding="utf-8-sig",
@@ -97,14 +118,12 @@ def save_master_dataframe(new_row: dict) -> None:
     )
     tmp.replace(CSV_FILE)
 
-    # שמירה כגיבוי עם timestamp
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv"
     df_master.to_csv(
         backup_path, index=False, encoding="utf-8-sig",
         quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
     )
-
 
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
