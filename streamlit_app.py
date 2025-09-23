@@ -501,13 +501,13 @@ if submitted:
         for s in SITES:
             row[f"דירוג_{s}"] = site_to_rank[s]
 
+  if submitted:
+    if errors:
+        show_errors(errors)
+    else:
         try:
-    # 1) מאסטר מצטבר – תמיד מוסיף ולא מוחק
-    save_master_dataframe(row)
-
-    # 2) יומן Append-Only
-    append_to_log(pd.DataFrame([row]))
-
-    st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
-except Exception as e:
-    st.error(f"❌ שמירה נכשלה: {e}")
+            save_master_dataframe(row)                 # מאסטר מצטבר
+            append_to_log(pd.DataFrame([row]))         # יומן Append-Only
+            st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
+        except Exception as e:
+            st.error(f"❌ שמירה נכשלה: {e}")
