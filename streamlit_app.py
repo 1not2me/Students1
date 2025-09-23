@@ -67,7 +67,7 @@ is_admin_mode = query_params.get("admin", ["0"])[0] == "1"
 # =========================
 # Google Sheets הגדרות
 # =========================
-SHEET_ID = st.secrets.get("SHEET_ID", "1HBi9K4Sh06Xqw1TmHQSL0w2MQVbgfRbTyvMSspYTYf4")
+SHEET_ID = st.secrets["sheets"]["spreadsheet_id"]
 
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -75,7 +75,7 @@ scope = [
 ]
 
 try:
-    creds_dict = st.secrets["google_service_account"]
+    creds_dict = st.secrets["gcp_service_account"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     gclient = gspread.authorize(creds)
     sheet = gclient.open_by_key(SHEET_ID).sheet1
