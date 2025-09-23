@@ -76,7 +76,7 @@ scope = [
 # שימוש ב-Secrets במקום קובץ JSON
 try:
     creds_dict = st.secrets["google_service_account"]
-    creds = Credentials.from_service_account_info(dict(creds_dict), scopes=scope)
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     gclient = gspread.authorize(creds)
     sheet = gclient.open_by_key(SHEET_ID).sheet1
 except Exception as e:
@@ -126,6 +126,10 @@ def save_master_dataframe(new_row: dict) -> None:
     # שמירה גם ל־Google Sheets
     if sheet:
         try:
+            # אם הגיליון ריק – הוסף כותרות
+            if len(sheet.get_all_values()) == 0:
+                sheet.append_row(list(new_row.keys()))
+            # הוספת הנתונים
             sheet.append_row(list(new_row.values()))
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
@@ -158,6 +162,7 @@ def show_errors(errors: list[str]):
     st.markdown("### :red[נמצאו שגיאות:]")
     for e in errors:
         st.markdown(f"- :red[{e}]")
+
 # =========================
 # מצב מנהל
 # =========================
