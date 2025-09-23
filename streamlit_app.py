@@ -107,6 +107,7 @@ def save_master_dataframe(new_row: dict) -> None:
     df_master = load_csv_safely(CSV_FILE)
     df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
 
+    # --- שמירה מקומית (CSV + גיבוי) ---
     tmp = CSV_FILE.with_suffix(".tmp.csv")
     df_master.to_csv(
         tmp, index=False, encoding="utf-8-sig",
@@ -121,14 +122,21 @@ def save_master_dataframe(new_row: dict) -> None:
         quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
     )
 
-    # שמירה גם ל־Google Sheets
+    # --- שמירה גם ל־Google Sheets ---
     if sheet:
         try:
-            if len(sheet.get_all_values()) == 0:
-                sheet.append_row(list(new_row.keys()))
-            sheet.append_row(list(new_row.values()))
+            headers = sheet.row_values(1)
+            if not headers:  # אם אין כותרות בכלל
+                headers = list(new_row.keys())
+                sheet.append_row(headers)  # שורת כותרות
+
+            # עכשיו נכניס ערכים לפי סדר הכותרות
+            row = [new_row.get(h, "") for h in headers]
+            sheet.append_row(row, value_input_option="USER_ENTERED")
+
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
+
 
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
