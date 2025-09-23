@@ -159,13 +159,19 @@ def save_master_dataframe(new_row: dict) -> None:
     df_master.to_csv(backup_path, index=False, encoding="utf-8-sig")
 
     # שמירה גם ל־Google Sheets
+        # שמירה גם ל־Google Sheets
     if sheet:
         try:
             if len(sheet.get_all_values()) == 0:
-                sheet.append_row(list(df_master.columns))  # כותרות יפות
-            sheet.append_row([new_row.get(k, "") for k in df_master.columns])
+                # שלח כותרות יפות
+                sheet.append_row(df_master.columns.tolist())
+            
+            # שלח את הערכים בדיוק לפי סדר העמודות
+            sheet.append_row([df_master.iloc[-1][col] for col in df_master.columns])
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
+
+
 
     # שמירה גם ל־Google Sheets
     if sheet:
