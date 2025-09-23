@@ -82,16 +82,29 @@ def load_csv_safely(path: Path) -> pd.DataFrame:
             continue
     return pd.DataFrame()
 
-def save_master_dataframe(df: pd.DataFrame) -> None:
+def save_master_dataframe(new_row: dict) -> None:
+    # טען את המאסטר הקיים אם יש
+    df_master = load_csv_safely(CSV_FILE)
+
+    # הוסף את השורה החדשה
+    df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
+
+    # שמירה על הקובץ הראשי
     tmp = CSV_FILE.with_suffix(".tmp.csv")
-    df.to_csv(tmp, index=False, encoding="utf-8-sig",
-              quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n")
+    df_master.to_csv(
+        tmp, index=False, encoding="utf-8-sig",
+        quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
+    )
     tmp.replace(CSV_FILE)
 
+    # שמירה כגיבוי עם timestamp
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv"
-    df.to_csv(backup_path, index=False, encoding="utf-8-sig",
-              quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n")
+    df_master.to_csv(
+        backup_path, index=False, encoding="utf-8-sig",
+        quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
+    )
+
 
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
@@ -489,14 +502,12 @@ if submitted:
             row[f"דירוג_{s}"] = site_to_rank[s]
 
         try:
-            # 1) מאסטר מצטבר (Load+Concat) – לא מתאפס לעולם
-            df_master = load_csv_safely(CSV_FILE)
-            df_master = pd.concat([df_master, pd.DataFrame([row])], ignore_index=True)
-            save_master_dataframe(df_master)
+    # 1) מאסטר מצטבר – תמיד מוסיף ולא מוחק
+    save_master_dataframe(row)
 
-            # 2) יומן Append-Only
-            append_to_log(pd.DataFrame([row]))
+    # 2) יומן Append-Only
+    append_to_log(pd.DataFrame([row]))
 
-            st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
-        except Exception as e:
-            st.error(f"❌ שמירה נכשלה: {e}")
+    st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
+except Exception as e:
+    st.error(f"❌ שמירה נכשלה: {e}")
