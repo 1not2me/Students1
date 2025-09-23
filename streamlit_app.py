@@ -3,7 +3,6 @@ import re
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime
-from zoneinfo import ZoneInfo  # חדש: בשביל שעון ישראל
 
 import streamlit as st
 import pandas as pd
@@ -115,14 +114,14 @@ def save_master_dataframe(new_row: dict) -> None:
     )
     tmp.replace(CSV_FILE)
 
-    # ✅ שמות גיבוי לפי שעון ישראל
-    ts = datetime.now(ZoneInfo("Asia/Jerusalem")).strftime("%Y%m%d_%H%M%S")
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv"
     df_master.to_csv(
         backup_path, index=False, encoding="utf-8-sig",
         quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n"
     )
 
+    # שמירה גם ל־Google Sheets
     if sheet:
         try:
             if len(sheet.get_all_values()) == 0:
@@ -130,7 +129,6 @@ def save_master_dataframe(new_row: dict) -> None:
             sheet.append_row(list(new_row.values()))
         except Exception as e:
             st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
-
 
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
@@ -160,6 +158,7 @@ def show_errors(errors: list[str]):
     st.markdown("### :red[נמצאו שגיאות:]")
     for e in errors:
         st.markdown(f"- :red[{e}]")
+
 # =========================
 # מצב מנהל
 # =========================
@@ -487,9 +486,9 @@ if submitted:
             site = st.session_state.get(f"rank_{i}")
             site_to_rank[site] = i
 
-        # ✅ בניית שורה לשמירה עם זמן ישראל
+        # בניית שורה לשמירה
         row = {
-            "תאריך_שליחה": datetime.now(ZoneInfo("Asia/Jerusalem")).strftime("%Y-%m-%d %H:%M:%S"),
+            "תאריך_שליחה": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "שם_פרטי": first_name.strip(),
             "שם_משפחה": last_name.strip(),
             "תעודת_זהות": nat_id.strip(),
@@ -527,7 +526,7 @@ if submitted:
         for s in SITES:
             row[f"דירוג_{s}"] = site_to_rank[s]
 
-        # ✅ שמירה
+        # ✅ שמירה (בתוך אותו בלוק)
         try:
             save_master_dataframe(row)
             append_to_log(pd.DataFrame([row]))
