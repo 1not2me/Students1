@@ -427,7 +427,7 @@ if submitted:
             site_to_rank[st.session_state.get(f"rank_{i}")] = i
 
         row = {
-            "תאריך_שליחה": datetime.now(),
+            "תאריך_שליחה": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "שם_פרטי": first_name.strip(),
             "שם_משפחה": last_name.strip(),
             "תעודת_זהות": nat_id.strip(),
@@ -467,4 +467,5 @@ if submitted:
             st.success("✅ הטופס נשלח ונשמר בהצלחה!")
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
+
 
