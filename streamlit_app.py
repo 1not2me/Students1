@@ -387,7 +387,46 @@ with tab5:
 # --- סעיף 6 ---
 with tab6:
     st.subheader("סיכום ושליחה")
-    confirm = st.checkbox("אני מאשר/ת כי המידע שמסרתי נכון ומדויק *")
+    st.markdown("בדקו את התקציר. אם יש טעות – חזרו לטאב המתאים, תקנו וחזרו לכאן. לאחר אישור ולחיצה על **שליחה** המידע יישמר.")
+
+    # מיפוי מדרגה->מוסד + מוסד->מדרגה
+    rank_to_site = {i: st.session_state.get(f"rank_{i}", "— בחר/י —") for i in range(1, RANK_COUNT + 1)}
+    site_to_rank = {s: None for s in SITES}
+    for i, s in rank_to_site.items():
+        if s and s != "— בחר/י —":
+            site_to_rank[s] = i
+
+    st.markdown("### 📍 העדפות שיבוץ (1=הכי רוצים)")
+    summary_pairs = [f"{rank_to_site[i]} – {i}" if rank_to_site[i] != "— בחר/י —" else f"(לא נבחר) – {i}"
+                     for i in range(1, RANK_COUNT + 1)]
+    st.table(pd.DataFrame({"דירוג": summary_pairs}))
+
+    st.markdown("### 🧑‍💻 פרטים אישיים")
+    st.table(pd.DataFrame([{
+        "שם פרטי": first_name, "שם משפחה": last_name, "ת״ז": nat_id, "מין": gender,
+        "שיוך חברתי": social_affil,
+        "שפת אם": (other_mt if mother_tongue == "אחר..." else mother_tongue),
+        "שפות נוספות": "; ".join([x for x in extra_langs if x != "אחר..."] + ([extra_langs_other] if "אחר..." in extra_langs else [])),
+        "טלפון": phone, "כתובת": address, "אימייל": email,
+        "שנת לימודים": (study_year_other if study_year == "אחר..." else study_year),
+        "מסלול לימודים": track,
+        "ניידות": (mobility_other if mobility == "אחר..." else mobility),
+    }]).T.rename(columns={0: "ערך"}))
+
+    st.markdown("### 🎓 נתונים אקדמיים")
+    st.table(pd.DataFrame([{"ממוצע ציונים": avg_grade}]).T.rename(columns={0: "ערך"}))
+
+    st.markdown("### 🧪 התאמות")
+    st.table(pd.DataFrame([{
+        "התאמות": "; ".join([a for a in adjustments if a != "אחר..."] + ([adjustments_other] if "אחר..." in adjustments else [])),
+        "פירוט התאמות": adjustments_details,
+    }]).T.rename(columns={0: "ערך"}))
+
+    st.markdown("### 🔥 מוטיבציה")
+    st.table(pd.DataFrame([{"מוכנות להשקיע מאמץ": m1, "חשיבות ההכשרה": m2, "מחויבות והתמדה": m3}]).T.rename(columns={0: "ערך"}))
+
+    st.markdown("---")
+    confirm = st.checkbox("אני מאשר/ת כי המידע שמסרתי נכון ומדויק, וידוע לי שאין התחייבות להתאמה מלאה לבחירותיי. *")
     submitted = st.button("שליחה ✉️")
 
 # =========================
@@ -422,10 +461,12 @@ if submitted:
     if errors:
         show_errors(errors)
     else:
+        # נבנה מיפוי דירוגים
         site_to_rank = {s: None for s in SITES}
         for i in range(1, RANK_COUNT + 1):
             site_to_rank[st.session_state.get(f"rank_{i}")] = i
 
+        # שורת נתונים חדשה
         row = {
             "תאריך_שליחה": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "שם_פרטי": first_name.strip(),
@@ -462,10 +503,28 @@ if submitted:
             row[f"דירוג_{s}"] = site_to_rank[s]
 
         try:
-            save_master_dataframe(row)
-            append_to_log(pd.DataFrame([row]))
-            st.success("✅ הטופס נשלח ונשמר בהצלחה!")
+            # נשמור כ־row נוסף ולא כתחליף
+            df_new = pd.DataFrame([row])
+            append_to_log(df_new)
+
+            if CSV_FILE.exists():
+                df_master = pd.read_csv(CSV_FILE, encoding="utf-8-sig")
+                df_master = pd.concat([df_master, df_new], ignore_index=True)
+            else:
+                df_master = df_new
+
+            df_master.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
+
+            # גם לגיבוי
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            df_master.to_csv(BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv", index=False, encoding="utf-8-sig")
+
+            # גם ל־Google Sheets
+            if sheet:
+                if len(sheet.get_all_values()) == 0:
+                    sheet.append_row(df_master.columns.tolist())
+                sheet.append_row(df_new.iloc[0].astype(str).tolist())
+
+            st.success("✅ הטופס נשלח ונשמר בהצלחה! אפשר למלא שוב טפסים נוספים 🚀")
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
-
-
