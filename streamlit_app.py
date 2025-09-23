@@ -484,8 +484,9 @@ if submitted:
             site_to_rank[site] = i
 
         # בניית שורה לשמירה (שימי לב: אין שבירת מחרוזות בעברית)
+        tz = pytz.timezone("Asia/Jerusalem")
         row = {
-            "תאריך_שליחה": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "תאריך_שליחה": datetime.now(tz).strftime("%d/%m/%Y %H:%M:%S"),
             "שם_פרטי": first_name.strip(),
             "שם_משפחה": last_name.strip(),
             "תעודת_זהות": nat_id.strip(),
