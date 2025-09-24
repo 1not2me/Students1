@@ -116,12 +116,13 @@ COLUMNS_ORDER = [
 # =========================
 # פונקציה לעיצוב Google Sheets
 # =========================
+
 def style_google_sheet(ws):
     """Apply styling to the Google Sheet."""
     
     # --- עיצוב כותרות (שורה 1) ---
     header_fmt = CellFormat(
-        backgroundColor=Color(0.2, 0.4, 0.8),   # כחול כהה
+        backgroundColor=Color(0.6, 0.4, 0.8),   # סגול בהיר
         textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1)),  # טקסט לבן מודגש
         horizontalAlignment='CENTER'
     )
