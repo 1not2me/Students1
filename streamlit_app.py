@@ -1,14 +1,100 @@
+# streamlit_app.py
+# -*- coding: utf-8 -*-
+import csv
+import re
+from io import BytesIO
+from pathlib import Path
+from datetime import datetime
+import pytz
+import streamlit as st
+import pandas as pd
+
+# --- Google Sheets
+import gspread
+from google.oauth2.service_account import Credentials
+from gspread_formatting import *   # <<< חדש
+
+# =========================
+# הגדרות כלליות
+# =========================
+st.set_page_config(page_title="שאלון לסטודנטים – תשפ״ו", layout="centered")
+
+# =========================
+# נתיבים/סודות + התמדה ארוכת טווח
+# =========================
+DATA_DIR   = Path("data")
+BACKUP_DIR = DATA_DIR / "backups"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+
+CSV_FILE      = DATA_DIR / "שאלון_שיבוץ.csv"
+CSV_LOG_FILE  = DATA_DIR / "שאלון_שיבוץ_log.csv"
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")
+
+query_params = st.query_params
+is_admin_mode = query_params.get("admin", ["0"])[0] == "1"
+
+# =========================
+# Google Sheets הגדרות
+# =========================
+SHEET_ID = st.secrets["sheets"]["spreadsheet_id"]
+
+scope = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
+
+try:
+    creds_dict = st.secrets["gcp_service_account"]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+    gclient = gspread.authorize(creds)
+    sheet = gclient.open_by_key(SHEET_ID).sheet1
+except Exception as e:
+    sheet = None
+    st.error(f"⚠ לא ניתן להתחבר ל־Google Sheets: {e}")
+
+# =========================
+# עמודות קבועות
+# =========================
+SITES = [
+    "כפר הילדים חורפיש",
+    "אנוש כרמיאל",
+    "הפוך על הפוך צפת",
+    "שירות מבחן לנוער עכו",
+    "כלא חרמון",
+    "בית חולים זיו",
+    "שירותי רווחה קריית שמונה",
+    "מרכז יום לגיל השלישי",
+    "מועדונית נוער בצפת",
+    "מרפאת בריאות הנפש צפת",
+]
+RANK_COUNT = 3
+
+COLUMNS_ORDER = [
+    "תאריך שליחה", "שם פרטי", "שם משפחה", "תעודת זהות", "מין", "שיוך חברתי",
+    "שפת אם", "שפות נוספות", "טלפון", "כתובת", "אימייל",
+    "שנת לימודים", "מסלול לימודים", "ניידות",
+    "הכשרה קודמת", "הכשרה קודמת מקום ותחום",
+    "הכשרה קודמת מדריך ומיקום", "הכשרה קודמת בן זוג",
+    "תחומים מועדפים", "תחום מוביל", "בקשה מיוחדת",
+    "ממוצע", "התאמות", "התאמות פרטים",
+    "מוטיבציה 1", "מוטיבציה 2", "מוטיבציה 3",
+] + [f"דירוג_מדרגה_{i}_מוסד" for i in range(1, RANK_COUNT+1)] + [f"דירוג_{s}" for s in SITES]
+
+# =========================
+# פונקציה לעיצוב Google Sheets
+# =========================
 def style_google_sheet(ws):
-    """Apply styling to the Google Sheet similar to the screenshot."""
-    # צבע כותרת: רקע כחול, טקסט לבן מודגש
+    """Apply styling to the Google Sheet."""
+    # עיצוב כותרת: כחול כהה, טקסט לבן
     header_fmt = CellFormat(
         backgroundColor=Color(0.2, 0.4, 0.8),
         textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1)),
         horizontalAlignment='CENTER'
     )
-    format_cell_range(ws, "1:1", header_fmt)  # כל שורת הכותרת
+    format_cell_range(ws, "1:1", header_fmt)
 
-    # צבעים מתחלפים לשורות
+    # צבעי רקע מתחלפים
     rule = ConditionalFormatRule(
         ranges=[GridRange.from_a1_range('A2:Z1000', ws)],
         booleanRule=BooleanRule(
@@ -17,21 +103,45 @@ def style_google_sheet(ws):
         )
     )
     rules = get_conditional_format_rules(ws)
+    rules.clear()
     rules.append(rule)
     rules.save()
 
-    # עמודה ראשונה (ID / ת"ז) בצבעים שונים
+    # עמודת ת"ז ברקע אפור
     id_fmt = CellFormat(
         horizontalAlignment='CENTER',
         backgroundColor=Color(0.9, 0.9, 0.9)
     )
-    format_cell_range(ws, "A2:A1000", id_fmt)
+    format_cell_range(ws, "C2:C1000", id_fmt)  # assuming עמודה C = תעודת זהות
 
-# בתוך save_master_dataframe, אחרי שמכניסים כותרות:
-if not headers or headers != COLUMNS_ORDER:
-    sheet.clear()
-    sheet.append_row(COLUMNS_ORDER, value_input_option="USER_ENTERED")
-    style_google_sheet(sheet)   # <<<< כאן מוסיפים
+# =========================
+# פונקציה לשמירה (כולל עיצוב)
+# =========================
+def save_master_dataframe(new_row: dict) -> None:
+    # --- שמירה מקומית ---
+    df_master = pd.DataFrame([new_row])
+    if CSV_FILE.exists():
+        df_master = pd.concat([pd.read_csv(CSV_FILE), df_master], ignore_index=True)
+    df_master.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv"
+    df_master.to_csv(backup_path, index=False, encoding="utf-8-sig")
+
+    # --- שמירה ל־Google Sheets ---
+    if sheet:
+        try:
+            headers = sheet.row_values(1)
+            if not headers or headers != COLUMNS_ORDER:
+                sheet.clear()
+                sheet.append_row(COLUMNS_ORDER, value_input_option="USER_ENTERED")
+                style_google_sheet(sheet)   # <<< עיצוב אוטומטי אחרי כותרות
+
+            row_values = [new_row.get(col, "") for col in COLUMNS_ORDER]
+            sheet.append_row(row_values, value_input_option="USER_ENTERED")
+
+        except Exception as e:
+            st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
 
 
 def append_to_log(row_df: pd.DataFrame) -> None:
