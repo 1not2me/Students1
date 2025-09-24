@@ -157,7 +157,7 @@ def save_master_dataframe(new_row: dict) -> None:
     backup_path = BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv"
     df_master.to_csv(backup_path, index=False, encoding="utf-8-sig")
 
-    # --- שמירה ל־Google Sheets ---
+    # --- שמירה ל־ Google Sheets ---
     if sheet:
         try:
             headers = sheet.row_values(1)
@@ -178,6 +178,51 @@ def append_to_log(row_df: pd.DataFrame) -> None:
     row_df.to_csv(CSV_LOG_FILE, mode="a", header=not file_exists,
                   index=False, encoding="utf-8-sig",
                   quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n")
+  # =========================
+# פונקציות עזר
+# =========================
+def load_csv_safely(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    attempts = [
+        dict(encoding="utf-8-sig"),
+        dict(encoding="utf-8"),
+        dict(encoding="utf-8-sig", engine="python", on_bad_lines="skip"),
+        dict(encoding="utf-8", engine="python", on_bad_lines="skip"),
+        dict(encoding="latin-1", engine="python", on_bad_lines="skip"),
+    ]
+    for kw in attempts:
+        try:
+            df = pd.read_csv(path, **kw)
+            df.columns = [c.replace("\ufeff", "").strip() for c in df.columns]
+            return df
+        except Exception:
+            continue
+    return pd.DataFrame()
+
+def df_to_excel_bytes(df: pd.DataFrame, sheet: str = "Sheet1") -> bytes:
+    bio = BytesIO()
+    with pd.ExcelWriter(bio, engine="xlsxwriter") as w:
+        df.to_excel(w, sheet_name=sheet, index=False)
+        ws = w.sheets[sheet]
+        for i, col in enumerate(df.columns):
+            width = 12
+            if not df.empty:
+                width = min(60, max(12, int(df[col].astype(str).map(len).max()) + 4))
+            ws.set_column(i, i, width)
+    bio.seek(0)
+    return bio.read()
+
+def valid_email(v: str) -> bool:  return bool(re.match(r"^[^@]+@[^@]+\.[^@]+$", v.strip()))
+def valid_phone(v: str) -> bool:  return bool(re.match(r"^0\d{1,2}-?\d{6,7}$", v.strip()))
+def valid_id(v: str) -> bool:     return bool(re.match(r"^\d{8,9}$", v.strip()))
+
+def show_errors(errors: list[str]):
+    if not errors: return
+    st.markdown("### :red[נמצאו שגיאות:]")
+    for e in errors:
+        st.markdown(f"- :red[{e}]")
+
   # =========================
 # מצב מנהל
 # =========================
@@ -394,9 +439,6 @@ with tab6:
     confirm = st.checkbox("אני מאשר/ת כי המידע שמסרתי נכון ומדויק, וידוע לי שאין התחייבות להתאמה מלאה לבחירותיי. *")
     submitted = st.button("שליחה ✉️")
 
-# =========================
-# ולידציה + שמירה
-# =========================
 if submitted:
     errors = []
 
