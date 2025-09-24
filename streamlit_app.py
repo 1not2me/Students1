@@ -12,7 +12,7 @@ import pandas as pd
 # --- Google Sheets
 import gspread
 from google.oauth2.service_account import Credentials
-from gspread_formatting import *   # <<< חדש
+from gspread_formatting import BooleanCondition
 
 # =========================
 # הגדרות כלליות
@@ -123,14 +123,13 @@ def style_google_sheet(ws):
     )
     format_cell_range(ws, "1:1", header_fmt)
 
-    # צבעי רקע מתחלפים
     rule = ConditionalFormatRule(
-        ranges=[GridRange.from_a1_range('A2:Z1000', ws)],
-        booleanRule=BooleanRule(
-            condition={'type': 'CUSTOM_FORMULA', 'values': [{'userEnteredValue': '=ISEVEN(ROW())'}]},
-            format=CellFormat(backgroundColor=Color(0.95, 0.95, 0.95))
-        )
+    ranges=[GridRange.from_a1_range('A2:Z1000', ws)],
+    booleanRule=BooleanRule(
+        condition=BooleanCondition('CUSTOM_FORMULA', ['=ISEVEN(ROW())']),
+        format=CellFormat(backgroundColor=Color(0.95, 0.95, 0.95))
     )
+)
     rules = get_conditional_format_rules(ws)
     rules.clear()
     rules.append(rule)
