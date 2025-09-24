@@ -12,8 +12,11 @@ import pandas as pd
 # --- Google Sheets
 import gspread
 from google.oauth2.service_account import Credentials
-from gspread_formatting import BooleanCondition
-
+from gspread_formatting import (
+    CellFormat, Color, TextFormat,
+    ConditionalFormatRule, BooleanRule, BooleanCondition,
+    GridRange, format_cell_range, get_conditional_format_rules
+)
 # =========================
 # הגדרות כלליות
 # =========================
@@ -115,33 +118,34 @@ COLUMNS_ORDER = [
 # =========================
 def style_google_sheet(ws):
     """Apply styling to the Google Sheet."""
-    # עיצוב כותרת: כחול כהה, טקסט לבן
+    
+    # --- עיצוב כותרות (שורה 1) ---
     header_fmt = CellFormat(
-        backgroundColor=Color(0.2, 0.4, 0.8),
-        textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1)),
+        backgroundColor=Color(0.2, 0.4, 0.8),   # כחול כהה
+        textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1)),  # טקסט לבן מודגש
         horizontalAlignment='CENTER'
     )
     format_cell_range(ws, "1:1", header_fmt)
 
+    # --- צבעי רקע מתחלפים (פסי זברה) ---
     rule = ConditionalFormatRule(
-    ranges=[GridRange.from_a1_range('A2:Z1000', ws)],
-    booleanRule=BooleanRule(
-        condition=BooleanCondition('CUSTOM_FORMULA', ['=ISEVEN(ROW())']),
-        format=CellFormat(backgroundColor=Color(0.95, 0.95, 0.95))
+        ranges=[GridRange.from_a1_range('A2:Z1000', ws)],
+        booleanRule=BooleanRule(
+            condition=BooleanCondition('CUSTOM_FORMULA', ['=ISEVEN(ROW())']),
+            format=CellFormat(backgroundColor=Color(0.95, 0.95, 0.95))  # אפור בהיר
+        )
     )
-)
     rules = get_conditional_format_rules(ws)
     rules.clear()
     rules.append(rule)
     rules.save()
 
-    # עמודת ת"ז ברקע אפור
+    # --- עיצוב עמודת ת"ז (C) ---
     id_fmt = CellFormat(
         horizontalAlignment='CENTER',
-        backgroundColor=Color(0.9, 0.9, 0.9)
+        backgroundColor=Color(0.9, 0.9, 0.9)  # אפור עדין
     )
-    format_cell_range(ws, "C2:C1000", id_fmt)  # assuming עמודה C = תעודת זהות
-
+    format_cell_range(ws, "C2:C1000", id_fmt)
 # =========================
 # פונקציה לשמירה (כולל עיצוב)
 # =========================
