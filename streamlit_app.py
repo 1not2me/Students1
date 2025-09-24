@@ -1,190 +1,38 @@
-# streamlit_app.py
-# -*- coding: utf-8 -*-
-import csv
-import re
-from io import BytesIO
-from pathlib import Path
-from datetime import datetime
-import pytz
-import streamlit as st
-import pandas as pd
+def style_google_sheet(ws):
+    """Apply styling to the Google Sheet similar to the screenshot."""
+    # צבע כותרת: רקע כחול, טקסט לבן מודגש
+    header_fmt = CellFormat(
+        backgroundColor=Color(0.2, 0.4, 0.8),
+        textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1)),
+        horizontalAlignment='CENTER'
+    )
+    format_cell_range(ws, "1:1", header_fmt)  # כל שורת הכותרת
 
-# --- Google Sheets
-import gspread
-from google.oauth2.service_account import Credentials
+    # צבעים מתחלפים לשורות
+    rule = ConditionalFormatRule(
+        ranges=[GridRange.from_a1_range('A2:Z1000', ws)],
+        booleanRule=BooleanRule(
+            condition={'type': 'CUSTOM_FORMULA', 'values': [{'userEnteredValue': '=ISEVEN(ROW())'}]},
+            format=CellFormat(backgroundColor=Color(0.95, 0.95, 0.95))
+        )
+    )
+    rules = get_conditional_format_rules(ws)
+    rules.append(rule)
+    rules.save()
 
-# =========================
-# הגדרות כלליות
-# =========================
-st.set_page_config(page_title="שאלון לסטודנטים – תשפ״ו", layout="centered")
+    # עמודה ראשונה (ID / ת"ז) בצבעים שונים
+    id_fmt = CellFormat(
+        horizontalAlignment='CENTER',
+        backgroundColor=Color(0.9, 0.9, 0.9)
+    )
+    format_cell_range(ws, "A2:A1000", id_fmt)
 
-# ====== עיצוב — לפי ה-CSS שביקשת ======
-st.markdown("""
-<style>
-:root{
-  --ink:#0f172a; 
-  --muted:#475569; 
-  --ring:rgba(99,102,241,.25); 
-  --card:rgba(255,255,255,.85);
-}
-html, body, [class*="css"] { font-family: system-ui, "Segoe UI", Arial; }
-.stApp, .main, [data-testid="stSidebar"]{ direction:rtl; text-align:right; }
-[data-testid="stAppViewContainer"]{
-  background:
-    radial-gradient(1200px 600px at 8% 8%, #e0f7fa 0%, transparent 65%),
-    radial-gradient(1000px 500px at 92% 12%, #ede7f6 0%, transparent 60%),
-    radial-gradient(900px 500px at 20% 90%, #fff3e0 0%, transparent 55%);
-}
-.block-container{ padding-top:1.1rem; }
-[data-testid="stForm"]{
-  background:var(--card);
-  border:1px solid #e2e8f0;
-  border-radius:16px;
-  padding:18px 20px;
-  box-shadow:0 8px 24px rgba(2,6,23,.06);
-}
-[data-testid="stWidgetLabel"] p{ text-align:right; margin-bottom:.25rem; color:var(--muted); }
-[data-testid="stWidgetLabel"] p::after{ content: " :"; }
-input, textarea, select{ direction:rtl; text-align:right; }
-</style>
-""", unsafe_allow_html=True)
+# בתוך save_master_dataframe, אחרי שמכניסים כותרות:
+if not headers or headers != COLUMNS_ORDER:
+    sheet.clear()
+    sheet.append_row(COLUMNS_ORDER, value_input_option="USER_ENTERED")
+    style_google_sheet(sheet)   # <<<< כאן מוסיפים
 
-# =========================
-# נתיבים/סודות + התמדה ארוכת טווח
-# =========================
-DATA_DIR   = Path("data")
-BACKUP_DIR = DATA_DIR / "backups"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-
-CSV_FILE      = DATA_DIR / "שאלון_שיבוץ.csv"
-CSV_LOG_FILE  = DATA_DIR / "שאלון_שיבוץ_log.csv"
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")
-
-query_params = st.query_params
-is_admin_mode = query_params.get("admin", ["0"])[0] == "1"
-
-# =========================
-# Google Sheets הגדרות
-# =========================
-SHEET_ID = st.secrets["sheets"]["spreadsheet_id"]
-
-scope = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
-]
-
-try:
-    creds_dict = st.secrets["gcp_service_account"]
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-    gclient = gspread.authorize(creds)
-    sheet = gclient.open_by_key(SHEET_ID).sheet1
-except Exception as e:
-    sheet = None
-    st.error(f"⚠ לא ניתן להתחבר ל־Google Sheets: {e}")
-
-# =========================
-# פונקציות עזר
-# =========================
-def load_csv_safely(path: Path) -> pd.DataFrame:
-    if not path.exists():
-        return pd.DataFrame()
-    attempts = [
-        dict(encoding="utf-8-sig"),
-        dict(encoding="utf-8"),
-        dict(encoding="utf-8-sig", engine="python", on_bad_lines="skip"),
-        dict(encoding="utf-8", engine="python", on_bad_lines="skip"),
-        dict(encoding="latin-1", engine="python", on_bad_lines="skip"),
-    ]
-    for kw in attempts:
-        try:
-            df = pd.read_csv(path, **kw)
-            df.columns = [c.replace("\ufeff", "").strip() for c in df.columns]
-            return df
-        except Exception:
-            continue
-    return pd.DataFrame()
-
-def df_to_excel_bytes(df: pd.DataFrame, sheet: str = "Sheet1") -> bytes:
-    bio = BytesIO()
-    with pd.ExcelWriter(bio, engine="xlsxwriter") as w:
-        df.to_excel(w, sheet_name=sheet, index=False)
-        ws = w.sheets[sheet]
-        for i, col in enumerate(df.columns):
-            width = 12
-            if not df.empty:
-                width = min(60, max(12, int(df[col].astype(str).map(len).max()) + 4))
-            ws.set_column(i, i, width)
-    bio.seek(0)
-    return bio.read()
-
-def valid_email(v: str) -> bool:  return bool(re.match(r"^[^@]+@[^@]+\.[^@]+$", v.strip()))
-def valid_phone(v: str) -> bool:  return bool(re.match(r"^0\d{1,2}-?\d{6,7}$", v.strip()))
-def valid_id(v: str) -> bool:     return bool(re.match(r"^\d{8,9}$", v.strip()))
-
-def show_errors(errors: list[str]):
-    if not errors: return
-    st.markdown("### :red[נמצאו שגיאות:]")
-    for e in errors:
-        st.markdown(f"- :red[{e}]")
-
-# =========================
-# עמודות קבועות (כולל דירוגים)
-# =========================
-SITES = [
-    "כפר הילדים חורפיש",
-    "אנוש כרמיאל",
-    "הפוך על הפוך צפת",
-    "שירות מבחן לנוער עכו",
-    "כלא חרמון",
-    "בית חולים זיו",
-    "שירותי רווחה קריית שמונה",
-    "מרכז יום לגיל השלישי",
-    "מועדונית נוער בצפת",
-    "מרפאת בריאות הנפש צפת",
-]
-RANK_COUNT = 3
-
-COLUMNS_ORDER = [
-    "תאריך שליחה", "שם פרטי", "שם משפחה", "תעודת זהות", "מין", "שיוך חברתי",
-    "שפת אם", "שפות נוספות", "טלפון", "כתובת", "אימייל",
-    "שנת לימודים", "מסלול לימודים", "ניידות",
-    "הכשרה קודמת", "הכשרה קודמת מקום ותחום",
-    "הכשרה קודמת מדריך ומיקום", "הכשרה קודמת בן זוג",
-    "תחומים מועדפים", "תחום מוביל", "בקשה מיוחדת",
-    "ממוצע", "התאמות", "התאמות פרטים",
-    "מוטיבציה 3", "מוטיבציה 2", "מוטיבציה 3",
-] + [f"דירוג_מדרגה_{i}_מוסד" for i in range(1, RANK_COUNT+1)] + [f"דירוג_{s}" for s in SITES]
-
-# =========================
-# פונקציה לשמירה (כולל כותרות קבועות)
-# =========================
-def save_master_dataframe(new_row: dict) -> None:
-    # --- שמירה מקומית ---
-    df_master = load_csv_safely(CSV_FILE)
-    df_master = pd.concat([df_master, pd.DataFrame([new_row])], ignore_index=True)
-
-    df_master.to_csv(CSV_FILE, index=False, encoding="utf-8-sig",
-                     quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n")
-
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = BACKUP_DIR / f"שאלון_שיבוץ_{ts}.csv"
-    df_master.to_csv(backup_path, index=False, encoding="utf-8-sig",
-                     quoting=csv.QUOTE_MINIMAL, escapechar="\\", lineterminator="\n")
-
-    # --- שמירה ל-Google Sheets ---
-    if sheet:
-        try:
-            headers = sheet.row_values(1)
-            if not headers or headers != COLUMNS_ORDER:
-                sheet.clear()
-                sheet.append_row(COLUMNS_ORDER, value_input_option="USER_ENTERED")
-
-            row_values = [new_row.get(col, "") for col in COLUMNS_ORDER]
-            sheet.append_row(row_values, value_input_option="USER_ENTERED")
-
-        except Exception as e:
-            st.error(f"❌ לא ניתן לשמור ב־Google Sheets: {e}")
 
 def append_to_log(row_df: pd.DataFrame) -> None:
     file_exists = CSV_LOG_FILE.exists()
