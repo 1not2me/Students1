@@ -18,6 +18,35 @@ from gspread_formatting import *   # <<< חדש
 # הגדרות כלליות
 # =========================
 st.set_page_config(page_title="שאלון לסטודנטים – תשפ״ו", layout="centered")
+st.markdown("""
+<style>
+:root{
+  --ink:#0f172a; 
+  --muted:#475569; 
+  --ring:rgba(99,102,241,.25); 
+  --card:rgba(255,255,255,.85);
+}
+html, body, [class*="css"] { font-family: system-ui, "Segoe UI", Arial; }
+.stApp, .main, [data-testid="stSidebar"]{ direction:rtl; text-align:right; }
+[data-testid="stAppViewContainer"]{
+  background:
+    radial-gradient(1200px 600px at 8% 8%, #e0f7fa 0%, transparent 65%),
+    radial-gradient(1000px 500px at 92% 12%, #ede7f6 0%, transparent 60%),
+    radial-gradient(900px 500px at 20% 90%, #fff3e0 0%, transparent 55%);
+}
+.block-container{ padding-top:1.1rem; }
+[data-testid="stForm"]{
+  background:var(--card);
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  padding:18px 20px;
+  box-shadow:0 8px 24px rgba(2,6,23,.06);
+}
+[data-testid="stWidgetLabel"] p{ text-align:right; margin-bottom:.25rem; color:var(--muted); }
+[data-testid="stWidgetLabel"] p::after{ content: " :"; }
+input, textarea, select{ direction:rtl; text-align:right; }
+</style>
+""", unsafe_allow_html=True)
 
 # =========================
 # נתיבים/סודות + התמדה ארוכת טווח
