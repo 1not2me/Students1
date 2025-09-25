@@ -308,6 +308,8 @@ with tab1:
         "תואר ראשון – תוכנית רגילה",
         "תואר ראשון – הסבה",
         "תואר שני"
+        ["— בחר/י —"] + chosen_domains if chosen_domains else ["— בחר/י —"]
+
     ])
     track = st.text_input("מסלול לימודים / תואר *")
     mobility = st.selectbox("אופן ההגעה להתמחות (ניידות) *", [
