@@ -331,6 +331,10 @@ with tab2:
     all_domains = ["רווחה","מוגבלות","זקנה","ילדים ונוער","בריאות הנפש",
                    "שיקום","משפחה","נשים","בריאות","קהילה","אחר..."]
     chosen_domains = st.multiselect("בחרו עד 3 תחומים *", all_domains, max_selections=3, placeholder="בחר/י עד שלושה תחומים")
+    st.markdown("""
+    :information_source: תחום **רווחה** פתוח לשיבוץ רק לסטודנטים שנה ג׳ ומעלה,
+    בשל הצורך בניסיון והתאמה למסגרות עירוניות עם אחריות רחבה יותר.
+    """)
     domains_other = st.text_input("פרט/י תחום אחר *") if "אחר..." in chosen_domains else ""
     top_domain = st.selectbox(
         "מה התחום הכי מועדף עליך, מבין שלושתם? *",
@@ -479,6 +483,8 @@ if submitted:
     if not track.strip(): errors.append("סעיף 1: יש למלא מסלול לימודים/תואר.")
     if mobility == "אחר..." and not mobility_other.strip():
         errors.append("סעיף 1: יש לפרט ניידות (אחר).")
+    if any("רווחה" in d for d in chosen_domains) and "שנה ג'" not in study_year:
+        errors.append("סעיף 2: תחום רווחה פתוח לשיבוץ רק לסטודנטים שנה ג׳ ומעלה.")
 
     # סעיף 2 — דירוג חובה 1..10 ללא כפילויות
     rank_to_site = {i: st.session_state.get(f"rank_{i}", "— בחר/י —") for i in range(1, RANK_COUNT + 1)}
