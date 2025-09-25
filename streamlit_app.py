@@ -341,6 +341,13 @@ with tab2:
         ["— בחר/י —"] + chosen_domains if chosen_domains else ["— בחר/י —"]
     )
 
+    # כאן נוספה הערת אזהרה על הדירוג
+    st.markdown("""
+    <span style='color:red; font-weight:bold'>
+    שימו לב: הדירוג איננו מחייב את מורי השיטות, אך מומלץ להתחשב בו.
+    </span>
+    """, unsafe_allow_html=True)
+
     st.markdown("**בחר/י מוסד לכל מדרגה דירוג (1 = הכי רוצים, 3 = הכי פחות). הבחירה כובלת קדימה — מוסדות שנבחרו ייעלמו מהמדרגות הבאות.**")
 
     # אתחול מצב הבחירות
@@ -356,6 +363,7 @@ with tab2:
         base = ["— בחר/י —"] + [s for s in SITES if (s not in chosen_before or s == current)]
         ordered = ["— בחר/י —"] + [s for s in SITES if s in base]
         return ordered
+
 
     cols = st.columns(2)
     for i in range(1, RANK_COUNT + 1):
