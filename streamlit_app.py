@@ -328,7 +328,8 @@ with tab2:
         prev_mentor = st.text_input("שם המדריך והמיקום הגיאוגרפי של ההכשרה *")
         prev_partner= st.text_input("מי היה/תה בן/בת הזוג להתמחות בשנה הקודמת? *")
 
-    all_domains = ["קהילה","מוגבלות","זקנה","ילדים ונוער","בריאות הנפש","שיקום","משפחה","נשים","בריאות","תָקוֹן","אחר..."]
+    all_domains = ["קהילה","מוגבלות","זקנה","ילדים ונוער","בריאות הנפש",
+                   "שיקום","משפחה","נשים","בריאות","רווחה","אחר..."]
     chosen_domains = st.multiselect("בחרו עד 3 תחומים *", all_domains, max_selections=3, placeholder="בחר/י עד שלושה תחומים")
     domains_other = st.text_input("פרט/י תחום אחר *") if "אחר..." in chosen_domains else ""
     top_domain = st.selectbox(
