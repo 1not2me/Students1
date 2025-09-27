@@ -451,13 +451,14 @@ with tab4:
     adjustments_other = ""
     adjustments_details = ""
 
-    # אם נבחר "אחר..." – תיפתח תיבה מיוחדת
-    if "אחר..." in adjustments:
-        adjustments_other = st.text_input("פרט/י התאמה אחרת *")
-
-    # רק אם המשתמש לא בחר "אין" – תוצג התיבה לפרטים
-    if "אין" not in adjustments:
-        adjustments_details = st.text_area("פרט: *", height=100)
+# סעיף 4
+   if not adjustments:
+       errors.append("סעיף 4: יש לבחור לפחות סוג התאמה אחד (או לציין 'אין').")
+   if "אחר..." in adjustments and not adjustments_other.strip():
+       errors.append("סעיף 4: נבחר 'אחר' – יש לפרט התאמה.")
+# רק אם לא נבחר 'אין' – יש לדרוש פירוט
+   if "אין" not in adjustments and not adjustments_details.strip():
+       errors.append("סעיף 4: יש לפרט התייחסות להתאמות.")
 
 # --- סעיף 5 ---
 with tab5:
