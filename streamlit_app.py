@@ -451,13 +451,18 @@ with tab4:
     adjustments_other = ""
     adjustments_details = ""
 
-    # סעיף 4
-    if not adjustments:
+        # סעיף 4 — התאמות
+    adj_list = [a.strip() for a in adjustments]
+    has_none = ("אין" in adj_list) and (len([a for a in adj_list if a != "אין"]) == 0)
+
+    if not adj_list:
         errors.append("סעיף 4: יש לבחור לפחות סוג התאמה אחד (או לציין 'אין').")
-    if "אחר..." in adjustments and not adjustments_other.strip():
+
+    if "אחר..." in adj_list and not adjustments_other.strip():
         errors.append("סעיף 4: נבחר 'אחר' – יש לפרט התאמה.")
-    # רק אם לא נבחר 'אין' – יש לדרוש פירוט
-    if "אין" not in adjustments and not adjustments_details.strip():
+
+    # רק אם לא נבחר 'אין' (בלבד) — דורשים פירוט
+    if not has_none and not adjustments_details.strip():
         errors.append("סעיף 4: יש לפרט התייחסות להתאמות.")
 
 # --- סעיף 5 ---
