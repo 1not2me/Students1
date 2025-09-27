@@ -451,14 +451,14 @@ with tab4:
     adjustments_other = ""
     adjustments_details = ""
 
-# סעיף 4
-   if not adjustments:
-       errors.append("סעיף 4: יש לבחור לפחות סוג התאמה אחד (או לציין 'אין').")
-   if "אחר..." in adjustments and not adjustments_other.strip():
-       errors.append("סעיף 4: נבחר 'אחר' – יש לפרט התאמה.")
-# רק אם לא נבחר 'אין' – יש לדרוש פירוט
-   if "אין" not in adjustments and not adjustments_details.strip():
-       errors.append("סעיף 4: יש לפרט התייחסות להתאמות.")
+    # סעיף 4
+    if not adjustments:
+        errors.append("סעיף 4: יש לבחור לפחות סוג התאמה אחד (או לציין 'אין').")
+    if "אחר..." in adjustments and not adjustments_other.strip():
+        errors.append("סעיף 4: נבחר 'אחר' – יש לפרט התאמה.")
+    # רק אם לא נבחר 'אין' – יש לדרוש פירוט
+    if "אין" not in adjustments and not adjustments_details.strip():
+        errors.append("סעיף 4: יש לפרט התייחסות להתאמות.")
 
 # --- סעיף 5 ---
 with tab5:
