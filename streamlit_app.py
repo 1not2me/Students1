@@ -515,26 +515,33 @@ with tab6:
 if submitted:
     errors = []
 
-    # סעיף 1 — בסיסי
-    if not first_name.strip(): errors.append("סעיף 1: יש למלא שם פרטי.")
-    if not last_name.strip():  errors.append("סעיף 1: יש למלא שם משפחה.")
-    if not valid_id(nat_id):   errors.append("סעיף 1: ת״ז חייבת להיות 8–9 ספרות.")
+    # סעיף 1 — פרטים אישיים
+    if not first_name.strip():
+        errors.append("סעיף 1: יש למלא שם פרטי.")
+    if not last_name.strip():
+        errors.append("סעיף 1: יש למלא שם משפחה.")
+    if not valid_id(nat_id):
+        errors.append("סעיף 1: ת״ז חייבת להיות 8–9 ספרות.")
     if mother_tongue == "אחר..." and not other_mt.strip():
         errors.append("סעיף 1: יש לציין שפת אם (אחר).")
     if not extra_langs or ("אחר..." in extra_langs and not extra_langs_other.strip()):
         errors.append("סעיף 1: יש לבחור שפות נוספות (ואם 'אחר' – לפרט).")
-    if not valid_phone(phone): errors.append("סעיף 1: מספר טלפון אינו תקין.")
-    if not address.strip():    errors.append("סעיף 1: יש למלא כתובת מלאה.")
-    if not valid_email(email): errors.append("סעיף 1: כתובת דוא״ל אינה תקינה.")
+    if not valid_phone(phone):
+        errors.append("סעיף 1: מספר טלפון אינו תקין.")
+    if not address.strip():
+        errors.append("סעיף 1: יש למלא כתובת מלאה.")
+    if not valid_email(email):
+        errors.append("סעיף 1: כתובת דוא״ל אינה תקינה.")
     if study_year == "אחר..." and not study_year_other.strip():
         errors.append("סעיף 1: יש לפרט שנת לימודים (אחר).")
-    if not track.strip(): errors.append("סעיף 1: יש למלא מסלול לימודים/תואר.")
+    if not track.strip():
+        errors.append("סעיף 1: יש למלא מסלול לימודים/תואר.")
     if mobility == "אחר..." and not mobility_other.strip():
         errors.append("סעיף 1: יש לפרט ניידות (אחר).")
     if any("רווחה" in d for d in chosen_domains) and "שנה ג'" not in study_year:
         errors.append("סעיף 2: תחום רווחה פתוח לשיבוץ רק לסטודנטים שנה ג׳ ומעלה.")
 
-    # סעיף 2 — דירוג חובה 1..10 ללא כפילויות
+    # סעיף 2 — העדפת שיבוץ
     rank_to_site = {i: st.session_state.get(f"rank_{i}", "— בחר/י —") for i in range(1, RANK_COUNT + 1)}
     missing = [i for i, s in rank_to_site.items() if s == "— בחר/י —"]
     if missing:
@@ -544,9 +551,12 @@ if submitted:
         errors.append("סעיף 2: קיימת כפילות בבחירת מוסדות. כל מוסד יכול להופיע פעם אחת בלבד.")
 
     if prev_training in ["כן","אחר..."]:
-        if not prev_place.strip():  errors.append("סעיף 2: יש למלא מקום/תחום אם הייתה הכשרה קודמת.")
-        if not prev_mentor.strip(): errors.append("סעיף 2: יש למלא שם מדריך ומיקום.")
-        if not prev_partner.strip():errors.append("ಸעיף 2: יש למלא בן/בת זוג להתמחות.")
+        if not prev_place.strip():
+            errors.append("סעיף 2: יש למלא מקום/תחום אם הייתה הכשרה קודמת.")
+        if not prev_mentor.strip():
+            errors.append("סעיף 2: יש למלא שם מדריך ומיקום.")
+        if not prev_partner.strip():
+            errors.append("סעיף 2: יש למלא בן/בת זוג להתמחות.")
 
     if not chosen_domains:
         errors.append("סעיף 2: יש לבחור עד 3 תחומים (לפחות אחד).")
@@ -558,26 +568,30 @@ if submitted:
     if not special_request.strip():
         errors.append("סעיף 2: יש לציין בקשה מיוחדת (אפשר 'אין').")
 
-    # סעיף 3
+    # סעיף 3 — נתונים אקדמיים
     if avg_grade is None or avg_grade <= 0:
         errors.append("סעיף 3: יש להזין ממוצע ציונים גדול מ-0.")
 
-    # סעיף 4
-    if not adjustments:
-        errors.append("סעיף 4: יש לבחור לפחות סוג התאמה אחד (או לציין 'אין').")
-    if "אחר..." in adjustments and not adjustments_other.strip():
-        errors.append("סעיף 4: נבחר 'אחר' – יש לפרט התאמה.")
-    if not adjustments_details.strip():
-        errors.append("סעיף 4: יש לפרט התייחסות להתאמות (אפשר 'אין').")
+    # סעיף 4 — התאמות
+    adj_list = [a.strip() for a in adjustments]
+    has_none = ("אין" in adj_list) and (len([a for a in adj_list if a != "אין"]) == 0)
 
-    # סעיף 5
+    if not adj_list:
+        errors.append("סעיף 4: יש לבחור לפחות סוג התאמה אחד (או לציין 'אין').")
+    if "אחר..." in adj_list and not adjustments_other.strip():
+        errors.append("סעיף 4: נבחר 'אחר' – יש לפרט התאמה.")
+    if not has_none and not adjustments_details.strip():
+        errors.append("סעיף 4: יש לפרט התייחסות להתאמות.")
+
+    # סעיף 5 — מוטיבציה
     if not (m1 and m2 and m3):
         errors.append("סעיף 5: יש לענות על שלוש שאלות המוטיבציה.")
 
-    # סעיף 6
+    # סעיף 6 — סיכום ושליחה
     if not confirm:
         errors.append("סעיף 6: יש לאשר את ההצהרה.")
 
+    # הצגת השגיאות או שמירה
     if errors:
         show_errors(errors)
     else:
