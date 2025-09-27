@@ -451,19 +451,13 @@ with tab4:
     adjustments_other = ""
     adjustments_details = ""
 
-        # סעיף 4 — התאמות
-    adj_list = [a.strip() for a in adjustments]
-    has_none = ("אין" in adj_list) and (len([a for a in adj_list if a != "אין"]) == 0)
+      # אם נבחר "אחר..." – תיפתח תיבה מיוחדת
+    if "אחר..." in adjustments:
+        adjustments_other = st.text_input("פרט/י התאמה אחרת *")
 
-    if not adj_list:
-        errors.append("סעיף 4: יש לבחור לפחות סוג התאמה אחד (או לציין 'אין').")
-
-    if "אחר..." in adj_list and not adjustments_other.strip():
-        errors.append("סעיף 4: נבחר 'אחר' – יש לפרט התאמה.")
-
-    # רק אם לא נבחר 'אין' (בלבד) — דורשים פירוט
-    if not has_none and not adjustments_details.strip():
-        errors.append("סעיף 4: יש לפרט התייחסות להתאמות.")
+    # רק אם המשתמש לא בחר "אין" – תוצג התיבה לפרטים
+    if "אין" not in adjustments:
+        adjustments_details = st.text_area("פרט: *", height=100)
 
 # --- סעיף 5 ---
 with tab5:
