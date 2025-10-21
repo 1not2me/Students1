@@ -24,26 +24,26 @@ st.set_page_config(page_title="שאלון לסטודנטים – תשפ״ו", la
 st.markdown("""
 <style>
 :root{
-  --ink:#0f172a; 
-  --muted:#475569; 
-  --ring:rgba(99,102,241,.25); 
-  --card:rgba(255,255,255,.85);
+  --ink:#0f172a; 
+  --muted:#475569; 
+  --ring:rgba(99,102,241,.25); 
+  --card:rgba(255,255,255,.85);
 }
 html, body, [class*="css"] { font-family: system-ui, "Segoe UI", Arial; }
 .stApp, .main, [data-testid="stSidebar"]{ direction:rtl; text-align:right; }
 [data-testid="stAppViewContainer"]{
-  background:
-    radial-gradient(1200px 600px at 8% 8%, #e0f7fa 0%, transparent 65%),
-    radial-gradient(1000px 500px at 92% 12%, #ede7f6 0%, transparent 60%),
-    radial-gradient(900px 500px at 20% 90%, #fff3e0 0%, transparent 55%);
+  background:
+    radial-gradient(1200px 600px at 8% 8%, #e0f7fa 0%, transparent 65%),
+    radial-gradient(1000px 500px at 92% 12%, #ede7f6 0%, transparent 60%),
+    radial-gradient(900px 500px at 20% 90%, #fff3e0 0%, transparent 55%);
 }
 .block-container{ padding-top:1.1rem; }
 [data-testid="stForm"]{
-  background:var(--card);
-  border:1px solid #e2e8f0;
-  border-radius:16px;
-  padding:18px 20px;
-  box-shadow:0 8px 24px rgba(2,6,23,.06);
+  background:var(--card);
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  padding:18px 20px;
+  box-shadow:0 8px 24px rgba(2,6,23,.06);
 }
 [data-testid="stWidgetLabel"] p{ text-align:right; margin-bottom:.25rem; color:var(--muted); }
 [data-testid="stWidgetLabel"] p::after{ content: " :"; }
@@ -60,12 +60,12 @@ st.markdown("""
 
 /* בסיס האפליקציה */
 html, body, .stApp, [data-testid="stAppViewContainer"], .main {
-  font-family: var(--app-font) !important;
+  font-family: var(--app-font) !important;
 }
 
 /* ודא שכל הצאצאים יורשים את הפונט */
 .stApp * {
-  font-family: var(--app-font) !important;
+  font-family: var(--app-font) !important;
 }
 
 /* רכיבי קלט/בחירה של Streamlit */
@@ -77,36 +77,33 @@ div[data-baseweb], /* select/radio/checkbox */
 .stRadio,
 .stCheckbox,
 .stButton > button {
-  font-family: var(--app-font) !important;
+  font-family: var(--app-font) !important;
 }
 
 /* טבלאות DataFrame/Arrow */
 div[data-testid="stDataFrame"] div {
-  font-family: var(--app-font) !important;
+  font-family: var(--app-font) !important;
 }
 
 /* כותרות */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--app-font) !important;
+  font-family: var(--app-font) !important;
 }
 </style>
 """, unsafe_allow_html=True)
 # =========================
 # נתיבים/סודות + התמדה ארוכת טווח
 # =========================
-DATA_DIR   = Path("data")
+# *** תיקון: הסרת רווחים קשיחים (U+00A0) ***
+DATA_DIR = Path("data")
 BACKUP_DIR = DATA_DIR / "backups"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
-CSV_FILE      = DATA_DIR / "שאלון_שיבוץ.csv"
-CSV_LOG_FILE  = DATA_DIR / "שאלון_שיבוץ_log.csv"
-# *** שינוי: קריאה בטוחה יותר לסיסמה אם אין secrets.toml/file
-# ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")
-if "ADMIN_PASSWORD" in st.secrets:
-    ADMIN_PASSWORD = st.secrets["ADMIN_PASSWORD"]
-else:
-    ADMIN_PASSWORD = "rawan_0304" # ערך ברירת מחדל אם אין secrets
+CSV_FILE = DATA_DIR / "שאלון_שיבוץ.csv"
+CSV_LOG_FILE = DATA_DIR / "שאלון_שיבוץ_log.csv"
+# *** סוף תיקון ***
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")
 
 query_params = st.query_params
 is_admin_mode = query_params.get("admin", ["0"])[0] == "1"
@@ -114,26 +111,21 @@ is_admin_mode = query_params.get("admin", ["0"])[0] == "1"
 # =========================
 # Google Sheets הגדרות
 # =========================
-# *** שינוי: בדיקה אם הסודות קיימים לפני הגישה
-SHEET_ID = st.secrets["sheets"]["spreadsheet_id"] if "sheets" in st.secrets and "spreadsheet_id" in st.secrets["sheets"] else None
+SHEET_ID = st.secrets["sheets"]["spreadsheet_id"]
 
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
-sheet = None
-if SHEET_ID and "gcp_service_account" in st.secrets:
-    try:
-        creds_dict = st.secrets["gcp_service_account"]
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-        gclient = gspread.authorize(creds)
-        sheet = gclient.open_by_key(SHEET_ID).sheet1
-    except Exception as e:
-        sheet = None
-        st.error(f"⚠ לא ניתן להתחבר ל־Google Sheets: {e}")
-elif SHEET_ID:
-    st.warning("⚠ חסרים פרטי שירות GCP ב־`st.secrets` כדי להתחבר ל־Google Sheets.")
+try:
+    creds_dict = st.secrets["gcp_service_account"]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+    gclient = gspread.authorize(creds)
+    sheet = gclient.open_by_key(SHEET_ID).sheet1
+except Exception as e:
+    sheet = None
+    st.error(f"⚠ לא ניתן להתחבר ל־Google Sheets: {e}")
 
 # =========================
 # עמודות קבועות
@@ -174,8 +166,8 @@ def style_google_sheet(ws):
     
     # --- עיצוב כותרות (שורה 1) ---
     header_fmt = CellFormat(
-        backgroundColor=Color(0.6, 0.4, 0.8),   # סגול בהיר
-        textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1)),  # טקסט לבן מודגש
+        backgroundColor=Color(0.6, 0.4, 0.8),    # סגול בהיר
+        textFormat=TextFormat(bold=True, foregroundColor=Color(1, 1, 1)),    # טקסט לבן מודגש
         horizontalAlignment='CENTER'
     )
     format_cell_range(ws, "1:1", header_fmt)
@@ -185,7 +177,7 @@ def style_google_sheet(ws):
         ranges=[GridRange.from_a1_range('A2:Z1000', ws)],
         booleanRule=BooleanRule(
             condition=BooleanCondition('CUSTOM_FORMULA', ['=ISEVEN(ROW())']),
-            format=CellFormat(backgroundColor=Color(0.95, 0.95, 0.95))  # אפור בהיר
+            format=CellFormat(backgroundColor=Color(0.95, 0.95, 0.95))    # אפור בהיר
         )
     )
     rules = get_conditional_format_rules(ws)
@@ -196,7 +188,7 @@ def style_google_sheet(ws):
     # --- עיצוב עמודת ת"ז (C) ---
     id_fmt = CellFormat(
         horizontalAlignment='CENTER',
-        backgroundColor=Color(0.9, 0.9, 0.9)  # אפור עדין
+        backgroundColor=Color(0.9, 0.9, 0.9)    # אפור עדין
     )
     format_cell_range(ws, "C2:C1000", id_fmt)
 # =========================
@@ -206,11 +198,7 @@ def save_master_dataframe(new_row: dict) -> None:
     # --- שמירה מקומית ---
     df_master = pd.DataFrame([new_row])
     if CSV_FILE.exists():
-        # *** תיקון: טעינה בטוחה יותר לקריאת CSV קיימת
-        df_existing = load_csv_safely(CSV_FILE)
-        if not df_existing.empty:
-            df_master = pd.concat([df_existing, df_master], ignore_index=True)
-        # *** סוף תיקון
+        df_master = pd.concat([load_csv_safely(CSV_FILE), df_master], ignore_index=True)
     df_master.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -224,7 +212,7 @@ def save_master_dataframe(new_row: dict) -> None:
             if not headers or headers != COLUMNS_ORDER:
                 sheet.clear()
                 sheet.append_row(COLUMNS_ORDER, value_input_option="USER_ENTERED")
-                style_google_sheet(sheet)   # <<< עיצוב אוטומטי אחרי כותרות
+                style_google_sheet(sheet)    # <<< עיצוב אוטומטי אחרי כותרות
 
             row_values = [new_row.get(col, "") for col in COLUMNS_ORDER]
             sheet.append_row(row_values, value_input_option="USER_ENTERED")
@@ -273,9 +261,9 @@ def df_to_excel_bytes(df: pd.DataFrame, sheet: str = "Sheet1") -> bytes:
     bio.seek(0)
     return bio.read()
 
-def valid_email(v: str) -> bool:  return bool(re.match(r"^[^@]+@[^@]+\.[^@]+$", v.strip()))
-def valid_phone(v: str) -> bool:  return bool(re.match(r"^0\d{1,2}-?\d{6,7}$", v.strip()))
-def valid_id(v: str) -> bool:     return bool(re.match(r"^\d{8,9}$", v.strip()))
+def valid_email(v: str) -> bool:  return bool(re.match(r"^[^@]+@[^@]+\.[^@]+$", v.strip()))
+def valid_phone(v: str) -> bool:  return bool(re.match(r"^0\d{1,2}-?\d{6,7}$", v.strip()))
+def valid_id(v: str) -> bool:      return bool(re.match(r"^\d{8,9}$", v.strip()))
 
 def show_errors(errors: list[str]):
     if not errors: return
@@ -293,7 +281,7 @@ if is_admin_mode:
         st.success("התחברת בהצלחה ✅")
 
         df_master = load_csv_safely(CSV_FILE)
-        df_log    = load_csv_safely(CSV_LOG_FILE)
+        df_log    = load_csv_safely(CSV_LOG_FILE)
 
         st.subheader("📦 קובץ ראשי (מאסטר)")
         if not df_master.empty:
@@ -342,27 +330,7 @@ STEPS = [
 if "step" not in st.session_state:
     st.session_state.step = 0
 if "acks" not in st.session_state:
-    st.session_state.acks = {i: False for i in range(len(STEPS)-1)}  # הצהרה בין הסעיפים 0..4
-
-# *** הוספת אתחול ערכי קלט בסיסיים ל-session_state אם אינם קיימים
-# (אמנם נעשה שימוש ב-get עם ברירת מחדל, אבל אתחול מלא מונע שגיאות פוטנציאליות)
-basic_keys_defaults = {
-    "first_name": "", "last_name": "", "nat_id": "", "gender": "זכר", "social_affil": "יהודי/ה",
-    "mother_tongue": "עברית", "other_mt": "", "extra_langs": [], "extra_langs_other": "",
-    "phone": "", "address": "", "email": "", "study_year": "תואר ראשון - שנה א", "study_year_other": "",
-    "track": "תואר ראשון – תוכנית רגילה", "prev_training": "לא", "prev_place": "", "prev_mentor": "",
-    "prev_partner": "", "chosen_domains": [], "domains_other": "", "top_domain": "— בחר/י —",
-    "special_request": "", "avg_grade": 0.0, "adjustments": ["אין"], "adjustments_other": "",
-    "adjustments_details": "", "m1": "מסכים/ה מאוד", "m2": "מסכים/ה מאוד", "m3": "מסכים/ה מאוד",
-    "arrival_confirm": False, "confirm": False
-}
-for k, v in basic_keys_defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
-for i in range(1, RANK_COUNT + 1):
-    if f"rank_{i}" not in st.session_state:
-        st.session_state[f"rank_{i}"] = "— בחר/י —"
-# *** סוף אתחול ***
+    st.session_state.acks = {i: False for i in range(len(STEPS)-1)}    # הצהרה בין הסעיפים 0..4
 
 def goto(i: int):
     st.session_state.step = int(i)
@@ -386,50 +354,49 @@ st.subheader(STEPS[step])
 
 # ===== שלב 1: פרטים אישיים =====
 if step == 0:
-    # *** תיקון: הוספת value לשימור הנתונים ***
-    st.text_input("שם פרטי *", key="first_name", value=st.session_state.first_name)
-    st.text_input("שם משפחה *", key="last_name", value=st.session_state.last_name)
-    st.text_input("מספר תעודת זהות *", key="nat_id", value=st.session_state.nat_id)
+    st.text_input("שם פרטי *", key="first_name", value=st.session_state.get("first_name", ""))
+    st.text_input("שם משפחה *", key="last_name", value=st.session_state.get("last_name", ""))
+    st.text_input("מספר תעודת זהות *", key="nat_id", value=st.session_state.get("nat_id", ""))
 
-    st.radio("מין *", ["זכר","נקבה"], horizontal=True, key="gender", index=["זכר","נקבה"].index(st.session_state.gender) if st.session_state.gender in ["זכר","נקבה"] else 0)
+    gender_options = ["זכר","נקבה"]
+    st.radio("מין *", gender_options, horizontal=True, key="gender", index=gender_options.index(st.session_state.get("gender", gender_options[0])) if st.session_state.get("gender") in gender_options else 0)
     
     social_options = ["יהודי/ה","מוסלמי/ת","נוצרי/ה","דרוזי/ת"]
-    st.selectbox("שיוך חברתי *", social_options, key="social_affil", index=social_options.index(st.session_state.social_affil) if st.session_state.social_affil in social_options else 0)
+    st.selectbox("שיוך חברתי *", social_options, key="social_affil", index=social_options.index(st.session_state.get("social_affil", social_options[0])) if st.session_state.get("social_affil") in social_options else 0)
 
     mt_options = ["עברית","ערבית","רוסית","אחר..."]
-    st.selectbox("שפת אם *", mt_options, key="mother_tongue", index=mt_options.index(st.session_state.mother_tongue) if st.session_state.mother_tongue in mt_options else 0)
+    st.selectbox("שפת אם *", mt_options, key="mother_tongue", index=mt_options.index(st.session_state.get("mother_tongue", mt_options[0])) if st.session_state.get("mother_tongue") in mt_options else 0)
     if st.session_state.get("mother_tongue") == "אחר...":
-        st.text_input("ציין/ני שפת אם אחרת *", key="other_mt", value=st.session_state.other_mt)
+        st.text_input("ציין/ני שפת אם אחרת *", key="other_mt", value=st.session_state.get("other_mt", ""))
 
     extra_langs_options = ["עברית","ערבית","רוסית","אמהרית","אנגלית","ספרדית","אחר..."]
     st.multiselect(
         "ציין/י שפות נוספות (ברמת שיחה) *",
         extra_langs_options,
-        default=st.session_state.extra_langs,
+        default=st.session_state.get("extra_langs", []),
         placeholder="בחר/י שפות נוספות", key="extra_langs"
     )
     if "אחר..." in (st.session_state.get("extra_langs") or []):
-        st.text_input("ציין/י שפה נוספת (אחר) *", key="extra_langs_other", value=st.session_state.extra_langs_other)
+        st.text_input("ציין/י שפה נוספת (אחר) *", key="extra_langs_other", value=st.session_state.get("extra_langs_other", ""))
 
-    st.text_input("מספר טלפון נייד * (למשל 050-1234567)", key="phone", value=st.session_state.phone)
-    st.text_input("כתובת מלאה (כולל יישוב) *", key="address", value=st.session_state.address)
-    st.text_input("כתובת דוא״ל *", key="email", value=st.session_state.email)
+    st.text_input("מספר טלפון נייד * (למשל 050-1234567)", key="phone", value=st.session_state.get("phone", ""))
+    st.text_input("כתובת מלאה (כולל יישוב) *", key="address", value=st.session_state.get("address", ""))
+    st.text_input("כתובת דוא״ל *", key="email", value=st.session_state.get("email", ""))
 
     study_year_options = [
         "תואר ראשון - שנה א", "תואר ראשון - שנה ב", "תואר ראשון - שנה ג'",
         "תואר שני - שנה א'", "תואר שני - שנה ב", "אחר"
     ]
-    st.selectbox("שנת הלימודים *", study_year_options, key="study_year", index=study_year_options.index(st.session_state.study_year) if st.session_state.study_year in study_year_options else 0)
+    st.selectbox("שנת הלימודים *", study_year_options, key="study_year", index=study_year_options.index(st.session_state.get("study_year", study_year_options[0])) if st.session_state.get("study_year") in study_year_options else 0)
     if st.session_state.get("study_year") == "אחר":
-        st.text_input("פרט/י שנת לימודים *", key="study_year_other", value=st.session_state.study_year_other)
+        st.text_input("פרט/י שנת לימודים *", key="study_year_other", value=st.session_state.get("study_year_other", ""))
 
     track_options = [
         "תואר ראשון – תוכנית רגילה",
         "תואר ראשון – הסבה",
         "תואר שני"
     ]
-    st.selectbox("מסלול הלימודים / תואר *", track_options, key="track", index=track_options.index(st.session_state.track) if st.session_state.track in track_options else 0)
-    # *** סוף תיקון שלב 1 ***
+    st.selectbox("מסלול הלימודים / תואר *", track_options, key="track", index=track_options.index(st.session_state.get("track", track_options[0])) if st.session_state.get("track") in track_options else 0)
 
     st.markdown("---")
     st.session_state.acks[0] = st.checkbox("אני מצהיר/ה כי מילאתי פרטים אישיים באופן מדויק. *", key="ack_0", value=st.session_state.acks.get(0, False))
@@ -437,32 +404,31 @@ if step == 0:
 
 # ===== שלב 2: העדפת שיבוץ =====
 if step == 1:
-    # *** תיקון: הוספת value/index לשימור הנתונים ***
     prev_training_options = ["כן","לא","אחר..."]
-    st.selectbox("האם עברת הכשרה מעשית בשנה קודמת? *", prev_training_options, key="prev_training", index=prev_training_options.index(st.session_state.prev_training) if st.session_state.prev_training in prev_training_options else 1)
+    st.selectbox("האם עברת הכשרה מעשית בשנה קודמת? *", prev_training_options, key="prev_training", index=prev_training_options.index(st.session_state.get("prev_training", "לא")) if st.session_state.get("prev_training") in prev_training_options else 1)
     
     if st.session_state.get("prev_training") in ["כן","אחר..."]:
-        st.text_input("אם כן, נא ציין שם מקום ותחום ההתמחות *", key="prev_place", value=st.session_state.prev_place)
-        st.text_input("שם המדריך והמיקום הגיאוגרפי של ההכשרה *", key="prev_mentor", value=st.session_state.prev_mentor)
-        st.text_input("מי היה/תה בן/בת הזוג להתמחות בשנה הקודמת? *", key="prev_partner", value=st.session_state.prev_partner)
+        st.text_input("אם כן, נא ציין שם מקום ותחום ההתמחות *", key="prev_place", value=st.session_state.get("prev_place", ""))
+        st.text_input("שם המדריך והמיקום הגיאוגרפי של ההכשרה *", key="prev_mentor", value=st.session_state.get("prev_mentor", ""))
+        st.text_input("מי היה/תה בן/בת הזוג להתמחות בשנה הקודמת? *", key="prev_partner", value=st.session_state.get("prev_partner", ""))
 
     all_domains = ["רווחה","מוגבלות","זקנה","ילדים ונוער","בריאות הנפש",
                    "שיקום","משפחה","נשים","בריאות","קהילה","אחר..."]
     st.multiselect("בחרו עד 3 תחומים *", all_domains, max_selections=3,
-                   default=st.session_state.chosen_domains,
+                   default=st.session_state.get("chosen_domains", []),
                    placeholder="בחר/י עד שלושה תחומים", key="chosen_domains")
 
     if "אחר..." in (st.session_state.get("chosen_domains") or []):
-        st.text_input("פרט/י תחום אחר *", key="domains_other", value=st.session_state.domains_other)
-    
-    # עדכון אפשרויות התחום המוביל
+        st.text_input("פרט/י תחום אחר *", key="domains_other", value=st.session_state.get("domains_other", ""))
+
     top_domain_options = ["— בחר/י —"] + (st.session_state.get("chosen_domains") or [])
-    top_domain_current = st.session_state.get("top_domain")
+    top_domain_current = st.session_state.get("top_domain", top_domain_options[0])
+    
     if top_domain_current not in top_domain_options:
         top_domain_index = 0
     else:
         top_domain_index = top_domain_options.index(top_domain_current)
-
+        
     st.selectbox(
         "מה התחום הכי מועדף עליך, מבין שלושתם? *",
         options=top_domain_options,
@@ -479,7 +445,7 @@ if step == 1:
 
     # --- אתחול/שימור מצב הבחירות ---
     for i in range(1, RANK_COUNT + 1):
-        st.session_state.setdefault(f"rank_{i}", "— בחר/י —") # כבר בוצע אתחול למעלה, אבל נשאיר להדגשה
+        st.session_state.setdefault(f"rank_{i}", "— בחר/י —")
 
     def options_for_rank(rank_i: int) -> list:
         current = st.session_state.get(f"rank_{rank_i}", "— בחר/י —")
@@ -493,16 +459,14 @@ if step == 1:
             opts = options_for_rank(i)
             current = st.session_state.get(f"rank_{i}", "— בחר/י —")
             
-            # *** תיקון: שימוש ב-index כדי לשמור את הבחירה הנוכחית בעת ריראנדר ***
             st.selectbox(
                 f"מקום הכשרה {i} (בחר/י מוסד) *",
                 options=opts,
                 index=opts.index(current) if current in opts else 0,
                 key=f"rank_{i}"
             )
-            # *** סוף תיקון ***
             
-    st.text_area("האם קיימת בקשה מיוחדת הקשורה למיקום או תחום ההתמחות? *", height=100, key="special_request", value=st.session_state.special_request)
+    st.text_area("האם קיימת בקשה מיוחדת הקשורה למיקום או תחום ההתמחות? *", height=100, key="special_request", value=st.session_state.get("special_request", ""))
 
     st.markdown("---")
     st.session_state.acks[1] = st.checkbox("אני מצהיר/ה כי העדפתי הוזנו במלואן. *", key="ack_1", value=st.session_state.acks.get(1, False))
@@ -510,16 +474,13 @@ if step == 1:
 
 # ===== שלב 3: נתונים אקדמיים =====
 if step == 2:
-    # *** תיקון: הוספת value לשימור הנתונים ***
-    st.number_input("ממוצע ציונים *", min_value=0.0, max_value=100.0, step=0.1, key="avg_grade", value=st.session_state.avg_grade)
-    # *** סוף תיקון שלב 3 ***
+    st.number_input("ממוצע ציונים *", min_value=0.0, max_value=100.0, step=0.1, key="avg_grade", value=st.session_state.get("avg_grade", 0.0))
     st.markdown("---")
     st.session_state.acks[2] = st.checkbox("אני מצהיר/ה כי הממוצע שהזנתי נכון. *", key="ack_2", value=st.session_state.acks.get(2, False))
     prev_next()
 
 # ===== שלב 4: התאמות =====
 if step == 3:
-    # *** תיקון: הוספת default/value לשימור הנתונים ***
     adjustment_options = ["אין","הריון","מגבלה רפואית (למשל: מחלה כרונית, אוטואימונית)",
                          "רגישות למרחב רפואי (למשל: לא לשיבוץ בבית חולים)",
                          "אלרגיה חמורה","נכות",
@@ -527,15 +488,14 @@ if step == 3:
     st.multiselect(
         "סוגי התאמות (ניתן לבחור כמה) *",
         adjustment_options,
-        default=st.session_state.adjustments,
+        default=st.session_state.get("adjustments", ["אין"]),
         placeholder="בחר/י אפשרויות התאמה", key="adjustments"
     )
     if "אחר..." in (st.session_state.get("adjustments") or []):
-        st.text_input("פרט/י התאמה אחרת *", key="adjustments_other", value=st.session_state.adjustments_other)
-        
+        st.text_input("פרט/י התאמה אחרת *", key="adjustments_other", value=st.session_state.get("adjustments_other", ""))
+    
     if "אין" not in (st.session_state.get("adjustments") or []):
-        st.text_area("פרט: *", height=100, key="adjustments_details", value=st.session_state.adjustments_details)
-    # *** סוף תיקון שלב 4 ***
+        st.text_area("פרט: *", height=100, key="adjustments_details", value=st.session_state.get("adjustments_details", ""))
 
     st.markdown("---")
     st.session_state.acks[3] = st.checkbox("אני מצהיר/ה כי מסרתי מידע מדויק על התאמות. *", key="ack_3", value=st.session_state.acks.get(3, False))
@@ -544,14 +504,10 @@ if step == 3:
 
 # ===== שלב 5: מוטיבציה =====
 if step == 4:
-    # *** תיקון: הוספת index לשימור הנתונים ***
     likert = ["בכלל לא מסכים/ה","1","2","3","4","מסכים/ה מאוד"]
-    
-    st.radio("1) מוכן/ה להשקיע מאמץ נוסף להגיע למקום המועדף *", likert, horizontal=True, key="m1", index=likert.index(st.session_state.m1) if st.session_state.m1 in likert else 5)
-    st.radio("2) ההכשרה המעשית חשובה לי כהזדמנות משמעותית להתפתחות *", likert, horizontal=True, key="m2", index=likert.index(st.session_state.m2) if st.session_state.m2 in likert else 5)
-    st.radio("3) אהיה מחויב/ת להגיע בזמן ולהתמיד גם בתנאים מאתגרים *", likert, horizontal=True, key="m3", index=likert.index(st.session_state.m3) if st.session_state.m3 in likert else 5)
-    # *** סוף תיקון שלב 5 ***
-    
+    st.radio("1) מוכן/ה להשקיע מאמץ נוסף להגיע למקום המועדף *", likert, horizontal=True, key="m1", index=likert.index(st.session_state.get("m1", likert[5])) if st.session_state.get("m1") in likert else 5)
+    st.radio("2) ההכשרה המעשית חשובה לי כהזדמנות משמעותית להתפתחות *", likert, horizontal=True, key="m2", index=likert.index(st.session_state.get("m2", likert[5])) if st.session_state.get("m2") in likert else 5)
+    st.radio("3) אהיה מחויב/ת להגיע בזמן ולהתמיד גם בתנאים מאתגרים *", likert, horizontal=True, key="m3", index=likert.index(st.session_state.get("m3", likert[5])) if st.session_state.get("m3") in likert else 5)
     st.markdown("---")
     st.session_state.acks[4] = st.checkbox("אני מצהיר/ה כי עניתי בכנות על שאלות המוטיבציה. *", key="ack_4", value=st.session_state.acks.get(4, False))
     prev_next()
@@ -573,8 +529,8 @@ if step == 5:
                      for i in range(1, RANK_COUNT + 1)]
     st.table(pd.DataFrame({"דירוג": summary_pairs}))
 
-    # עיבוד נתונים לשולחן הסיכום - במקום לחזור על לוגיקת עיבוד ארוכה, ניצור את הנתונים המעובדים פעם אחת
-    processed_data = {
+    st.markdown("### 🧑‍💻 פרטים אישיים")
+    st.table(pd.DataFrame([{
         "שם פרטי": st.session_state.get("first_name",""), "שם משפחה": st.session_state.get("last_name",""), "ת״ז": st.session_state.get("nat_id",""), "מין": st.session_state.get("gender",""),
         "שיוך חברתי": st.session_state.get("social_affil",""),
         "שפת אם": (st.session_state.get("other_mt","") if st.session_state.get("mother_tongue") == "אחר..." else st.session_state.get("mother_tongue","")),
@@ -582,21 +538,14 @@ if step == 5:
         "טלפון": st.session_state.get("phone",""), "כתובת": st.session_state.get("address",""), "אימייל": st.session_state.get("email",""),
         "שנת לימודים": (st.session_state.get("study_year_other","") if st.session_state.get("study_year") == "אחר" else st.session_state.get("study_year","")),
         "מסלול לימודים": st.session_state.get("track",""),
-    }
-    st.markdown("### 🧑‍💻 פרטים אישיים")
-    st.table(pd.DataFrame([processed_data]).T.rename(columns={0: "ערך"}))
+    }]).T.rename(columns={0: "ערך"}))
 
     st.markdown("### 🎓 נתונים אקדמיים")
     st.table(pd.DataFrame([{"ממוצע ציונים": st.session_state.get("avg_grade","")}]).T.rename(columns={0: "ערך"}))
 
-    # עיבוד התאמות לסיכום
-    adj_list_for_summary = [a for a in st.session_state.get("adjustments",[]) if a != "אחר..."]
-    if "אחר..." in st.session_state.get("adjustments",[]):
-        adj_list_for_summary.append(st.session_state.get("adjustments_other",""))
-        
     st.markdown("### 🧪 התאמות")
     st.table(pd.DataFrame([{
-        "התאמות": "; ".join(adj_list_for_summary),
+        "התאמות": "; ".join([a for a in st.session_state.get("adjustments",[]) if a != "אחר..."] + ([st.session_state.get("adjustments_other","")] if "אחר..." in st.session_state.get("adjustments",[]) else [])),
         "פירוט התאמות": st.session_state.get("adjustments_details",""),
     }]).T.rename(columns={0: "ערך"}))
 
@@ -604,56 +553,53 @@ if step == 5:
     st.table(pd.DataFrame([{"מוכנות להשקיע מאמץ": st.session_state.get("m1",""), "חשיבות ההכשרה": st.session_state.get("m2",""), "מחויבות והתמדה": st.session_state.get("m3","")}]).T.rename(columns={0: "ערך"}))
 
     st.markdown("---")
-    
     # *** תיקון: הוספת value לשימור מצב הצ'קבוקסים ***
-    arrival_confirm = st.checkbox("אני מצהיר/ה שאגיע בכל דרך להכשרה המעשית שתיקבע לי. *", key="arrival_confirm", value=st.session_state.arrival_confirm)
-    confirm = st.checkbox("אני מאשר/ת כי המידע שמסרתי נכון ומדויק, וידוע לי שאין התחייבות להתאמה מלאה לבחירותיי. *", key="confirm", value=st.session_state.confirm)
+    arrival_confirm = st.checkbox("אני מצהיר/ה שאגיע בכל דרך להכשרה המעשית שתיקבע לי. *", key="arrival_confirm", value=st.session_state.get("arrival_confirm", False))
+    confirm = st.checkbox("אני מאשר/ת כי המידע שמסרתי נכון ומדויק, וידוע לי שאין התחייבות להתאמה מלאה לבחירותיי. *", key="confirm", value=st.session_state.get("confirm", False))
     # *** סוף תיקון ***
-    
     submitted = st.button("שליחה ✉️")
 
 # ===== התאמה לזרימת הוולידציה והשמירה המקורית (משתנים לוקאליים) =====
-# הקוד המקורי השתמש במשתנים לוקאליים אלו לוולידציה/שמירה, למרות שהם נטענים מ-session_state.
-# אין צורך לשנות את הבלוק הזה, הוא עושה את העבודה:
-first_name       = st.session_state.get("first_name","")
-last_name        = st.session_state.get("last_name","")
-nat_id           = st.session_state.get("nat_id","")
-gender           = st.session_state.get("gender","")
-social_affil     = st.session_state.get("social_affil","")
-mother_tongue    = st.session_state.get("mother_tongue","")
-other_mt         = st.session_state.get("other_mt","")
-extra_langs      = st.session_state.get("extra_langs",[])
-extra_langs_other= st.session_state.get("extra_langs_other","")
-phone            = st.session_state.get("phone","")
-address          = st.session_state.get("address","")
-email            = st.session_state.get("email","")
-study_year       = st.session_state.get("study_year","")
-study_year_other = st.session_state.get("study_year_other","")
-track            = st.session_state.get("track","")
+# ממפים מ-session_state לשמות המקוריים שלך, כדי לא לשנות ולידציה/שמירה קיימות
+first_name         = st.session_state.get("first_name","")
+last_name          = st.session_state.get("last_name","")
+nat_id             = st.session_state.get("nat_id","")
+gender             = st.session_state.get("gender","")
+social_affil       = st.session_state.get("social_affil","")
+mother_tongue      = st.session_state.get("mother_tongue","")
+other_mt           = st.session_state.get("other_mt","")
+extra_langs        = st.session_state.get("extra_langs",[])
+extra_langs_other  = st.session_state.get("extra_langs_other","")
+phone              = st.session_state.get("phone","")
+address            = st.session_state.get("address","")
+email              = st.session_state.get("email","")
+study_year         = st.session_state.get("study_year","")
+study_year_other   = st.session_state.get("study_year_other","")
+track              = st.session_state.get("track","")
 
-prev_training    = st.session_state.get("prev_training","לא")
-prev_place       = st.session_state.get("prev_place","")
-prev_mentor      = st.session_state.get("prev_mentor","")
-prev_partner     = st.session_state.get("prev_partner","")
+prev_training      = st.session_state.get("prev_training","לא")
+prev_place         = st.session_state.get("prev_place","")
+prev_mentor        = st.session_state.get("prev_mentor","")
+prev_partner       = st.session_state.get("prev_partner","")
 
-chosen_domains   = st.session_state.get("chosen_domains",[])
-domains_other    = st.session_state.get("domains_other","")
-top_domain       = st.session_state.get("top_domain","— בחר/י —")
+chosen_domains     = st.session_state.get("chosen_domains",[])
+domains_other      = st.session_state.get("domains_other","")
+top_domain         = st.session_state.get("top_domain","— בחר/י —")
 
-special_request  = st.session_state.get("special_request","")
-avg_grade        = st.session_state.get("avg_grade", None)
-adjustments      = st.session_state.get("adjustments",[])
-adjustments_other= st.session_state.get("adjustments_other","")
+special_request    = st.session_state.get("special_request","")
+avg_grade          = st.session_state.get("avg_grade", None)
+adjustments        = st.session_state.get("adjustments",[])
+adjustments_other  = st.session_state.get("adjustments_other","")
 adjustments_details = st.session_state.get("adjustments_details","")
 
-m1               = st.session_state.get("m1","")
-m2               = st.session_state.get("m2","")
-m3               = st.session_state.get("m3","")
+m1                 = st.session_state.get("m1","")
+m2                 = st.session_state.get("m2","")
+m3                 = st.session_state.get("m3","")
 
-arrival_confirm  = st.session_state.get("arrival_confirm", False)
-confirm          = st.session_state.get("confirm", False)
+arrival_confirm    = st.session_state.get("arrival_confirm", False)
+confirm            = st.session_state.get("confirm", False)
 
-# ===== ולידציה ושמירה — מיחזור הבלוק שלך (לא שונו) =====
+# ===== ולידציה ושמירה — מיחזור הבלוק שלך =====
 if submitted:
     errors = []
 
@@ -707,7 +653,7 @@ if submitted:
         errors.append("סעיף 2: יש לבחור עד 3 תחומים (לפחות אחד).")
     if "אחר..." in chosen_domains and not domains_other.strip():
         errors.append("סעיף 2: נבחר 'אחר' – יש לפרט תחום.")
-    if not top_domain or top_domain == "— בחר/י —" or (top_domain not in chosen_domains): # תיקון: בדיקה גם ל- top_domain ריק/ברירת מחדל
+    if chosen_domains and (top_domain not in chosen_domains):
         errors.append("סעיף 2: יש לבחור תחום מוביל מתוך השלושה.")
     if any("רווחה" in d for d in chosen_domains) and "שנה ג'" not in study_year:
         errors.append("סעיף 2: תחום רווחה פתוח לשיבוץ רק לסטודנטים שנה ג׳ ומעלה.")
@@ -728,11 +674,7 @@ if submitted:
     if "אחר..." in adj_list and not adjustments_other.strip():
         errors.append("סעיף 4: נבחר 'אחר' – יש לפרט התאמה.")
     if not has_none and not adjustments_details.strip():
-        errors.append("סעיף 4: יש לפרט התייחסות להתאמות (אם נבחר משהו פרט ל'אין').") # תיקון בניסוח השגיאה
-        
-    # בדיקה נוספת: אם נבחרה 'אין' יחד עם התאמות אחרות
-    if "אין" in adj_list and len(adj_list) > 1:
-         errors.append("סעיף 4: לא ניתן לבחור 'אין' יחד עם סוגי התאמה נוספים.")
+        errors.append("סעיף 4: יש לפרט התייחסות להתאמות.")
 
     # סעיף 5 — מוטיבציה
     if not (m1 and m2 and m3):
@@ -753,26 +695,24 @@ if submitted:
         for i in range(1, RANK_COUNT + 1):
             site = st.session_state.get(f"rank_{i}")
             if site and site != "— בחר/י —":
-                site_to_rank[site] = i
+                 site_to_rank[site] = i
 
         # בניית שורה לשמירה
         tz = pytz.timezone("Asia/Jerusalem")
         
-        # בניית רשימת שפות נוספות מעובדת
+        # עיבוד שדות מרובי בחירה לפני שמירה
         extra_langs_proc = [x for x in extra_langs if x != "אחר..."]
         if "אחר..." in extra_langs and extra_langs_other.strip():
             extra_langs_proc.append(extra_langs_other.strip())
-            
-        # בניית רשימת תחומים מועדפים מעובדת
+
         chosen_domains_proc = [d for d in chosen_domains if d != "אחר..."]
         if "אחר..." in chosen_domains and domains_other.strip():
             chosen_domains_proc.append(domains_other.strip())
-            
-        # בניית רשימת התאמות מעובדת
+
         adjustments_proc = [a for a in adjustments if a != "אחר..."]
         if "אחר..." in adjustments and adjustments_other.strip():
             adjustments_proc.append(adjustments_other.strip())
-            
+
         row = {
             "תאריך שליחה": datetime.now(tz).strftime("%d/%m/%Y %H:%M:%S"),
             "שם פרטי": first_name.strip(),
@@ -797,32 +737,4 @@ if submitted:
             "ממוצע": avg_grade,
             "התאמות": "; ".join(adjustments_proc),
             "התאמות פרטים": adjustments_details.strip(),
-            "מוטיבציה 1": m1,
-            "מוטיבציה 2": m2,
-            "מוטיבציה 3": m3,
-            "אישור הגעה להכשרה": "כן" if arrival_confirm else "לא",
-        }
-
-        # 1) שדות "מקום הכשרה i"
-        for i in range(1, RANK_COUNT + 1):
-            row[f"מקום הכשרה {i}"] = st.session_state.get(f"rank_{i}")
-        # 2) Site -> Rank (לשימוש נוח ב-Excel)
-        for s in SITES:
-            # נרשום None אם לא נבחר או אם הערך הוא None/לא חוקי
-            rank_value = site_to_rank.get(s)
-            row[f"דירוג_{s}"] = rank_value if isinstance(rank_value, int) else ""
-
-
-        try:
-            # שמירה במאסטר + Google Sheets
-            save_master_dataframe(row)
-
-            # יומן Append-Only
-            append_to_log(pd.DataFrame([row]))
-
-            # איפוס המצב לאחר שליחה מוצלחת
-            st.session_state.clear()
-            
-            st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
-        except Exception as e:
-            st.error(f"❌ שמירה נכשלה: {e}")
+            "מוטיבציה
