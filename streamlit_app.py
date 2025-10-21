@@ -338,13 +338,13 @@ def prev_next():
     c1, c2, c3 = st.columns(3)
     with c1:
         if st.session_state.step > 0:
-            st.button("⬅ חזרה", on_click=goto, args=(st.session_state.step - 1,), use_container_width=True)
+            st.button("⬅➡ חזרה", on_click=goto, args=(st.session_state.step - 1,), use_container_width=True)
     with c2:
         st.markdown(f"<div style='text-align:center;color:#64748b'>שלב {st.session_state.step+1} מתוך {len(STEPS)}</div>", unsafe_allow_html=True)
     with c3:
         if st.session_state.step < len(STEPS) - 1:
             disabled = not st.session_state.acks.get(st.session_state.step, True) if st.session_state.step <= 4 else False
-            st.button("הבא ➡", on_click=goto, args=(st.session_state.step + 1,), disabled=disabled, use_container_width=True)
+            st.button("הבא ⬅", on_click=goto, args=(st.session_state.step + 1,), disabled=disabled, use_container_width=True)
 
 
 step = st.session_state.step
