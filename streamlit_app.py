@@ -367,43 +367,37 @@ st.subheader(STEPS[step])
 
 # ===== שלב 1: פרטים אישיים =====
 if step == 0:
-    st.session_state.first_name = st.text_input("שם פרטי *", key="first_name") if "first_name" not in st.session_state else st.text_input("שם פרטי *", value=st.session_state.first_name, key="first_name")
-    st.session_state.last_name  = st.text_input("שם משפחה *", key="last_name") if "last_name" not in st.session_state else st.text_input("שם משפחה *", value=st.session_state.last_name, key="last_name")
-    st.session_state.nat_id     = st.text_input("מספר תעודת זהות *", key="nat_id") if "nat_id" not in st.session_state else st.text_input("מספר תעודת זהות *", value=st.session_state.nat_id, key="nat_id")
+    st.text_input("שם פרטי *", key="first_name")
+    st.text_input("שם משפחה *", key="last_name")
+    st.text_input("מספר תעודת זהות *", key="nat_id")
 
-    st.session_state.gender = st.radio("מין *", ["זכר","נקבה"], horizontal=True, key="gender")
-    st.session_state.social_affil = st.selectbox("שיוך חברתי *", ["יהודי/ה","מוסלמי/ת","נוצרי/ה","דרוזי/ת"], key="social_affil")
+    st.radio("מין *", ["זכר","נקבה"], horizontal=True, key="gender")
+    st.selectbox("שיוך חברתי *", ["יהודי/ה","מוסלמי/ת","נוצרי/ה","דרוזי/ת"], key="social_affil")
 
-    st.session_state.mother_tongue = st.selectbox("שפת אם *", ["עברית","ערבית","רוסית","אחר..."], key="mother_tongue")
-    if st.session_state.mother_tongue == "אחר...":
-        st.session_state.other_mt = st.text_input("ציין/ני שפת אם אחרת *", key="other_mt")
-    else:
-        st.session_state.other_mt = ""
+    st.selectbox("שפת אם *", ["עברית","ערבית","רוסית","אחר..."], key="mother_tongue")
+    if st.session_state.get("mother_tongue") == "אחר...":
+        st.text_input("ציין/ני שפת אם אחרת *", key="other_mt")
 
-    st.session_state.extra_langs = st.multiselect(
+    st.multiselect(
         "ציין/י שפות נוספות (ברמת שיחה) *",
         ["עברית","ערבית","רוסית","אמהרית","אנגלית","ספרדית","אחר..."],
         placeholder="בחר/י שפות נוספות", key="extra_langs"
     )
-    if "אחר..." in (st.session_state.extra_langs or []):
-        st.session_state.extra_langs_other = st.text_input("ציין/י שפה נוספת (אחר) *", key="extra_langs_other")
-    else:
-        st.session_state.extra_langs_other = ""
+    if "אחר..." in (st.session_state.get("extra_langs") or []):
+        st.text_input("ציין/י שפה נוספת (אחר) *", key="extra_langs_other")
 
-    st.session_state.phone   = st.text_input("מספר טלפון נייד * (למשל 050-1234567)", key="phone")
-    st.session_state.address = st.text_input("כתובת מלאה (כולל יישוב) *", key="address")
-    st.session_state.email   = st.text_input("כתובת דוא״ל *", key="email")
+    st.text_input("מספר טלפון נייד * (למשל 050-1234567)", key="phone")
+    st.text_input("כתובת מלאה (כולל יישוב) *", key="address")
+    st.text_input("כתובת דוא״ל *", key="email")
 
-    st.session_state.study_year = st.selectbox("שנת הלימודים *", [
+    st.selectbox("שנת הלימודים *", [
         "תואר ראשון - שנה א", "תואר ראשון - שנה ב", "תואר ראשון - שנה ג'",
         "תואר שני - שנה א'", "תואר שני - שנה ב", "אחר"
     ], key="study_year")
-    if st.session_state.study_year == "אחר":
-        st.session_state.study_year_other = st.text_input("פרט/י שנת לימודים *", key="study_year_other")
-    else:
-        st.session_state.study_year_other = ""
+    if st.session_state.get("study_year") == "אחר":
+        st.text_input("פרט/י שנת לימודים *", key="study_year_other")
 
-    st.session_state.track = st.selectbox("מסלול הלימודים / תואר *", [
+    st.selectbox("מסלול הלימודים / תואר *", [
         "תואר ראשון – תוכנית רגילה",
         "תואר ראשון – הסבה",
         "תואר שני"
@@ -415,26 +409,23 @@ if step == 0:
 
 # ===== שלב 2: העדפת שיבוץ =====
 if step == 1:
-    st.session_state.prev_training = st.selectbox("האם עברת הכשרה מעשית בשנה קודמת? *", ["כן","לא","אחר..."], key="prev_training")
-    if st.session_state.prev_training in ["כן","אחר..."]:
-        st.session_state.prev_place   = st.text_input("אם כן, נא ציין שם מקום ותחום ההתמחות *", key="prev_place")
-        st.session_state.prev_mentor  = st.text_input("שם המדריך והמיקום הגיאוגרפי של ההכשרה *", key="prev_mentor")
-        st.session_state.prev_partner = st.text_input("מי היה/תה בן/בת הזוג להתמחות בשנה הקודמת? *", key="prev_partner")
-    else:
-        st.session_state.prev_place = st.session_state.prev_mentor = st.session_state.prev_partner = ""
+    st.selectbox("האם עברת הכשרה מעשית בשנה קודמת? *", ["כן","לא","אחר..."], key="prev_training")
+    if st.session_state.get("prev_training") in ["כן","אחר..."]:
+        st.text_input("אם כן, נא ציין שם מקום ותחום ההתמחות *", key="prev_place")
+        st.text_input("שם המדריך והמיקום הגיאוגרפי של ההכשרה *", key="prev_mentor")
+        st.text_input("מי היה/תה בן/בת הזוג להתמחות בשנה הקודמת? *", key="prev_partner")
 
     all_domains = ["רווחה","מוגבלות","זקנה","ילדים ונוער","בריאות הנפש",
                    "שיקום","משפחה","נשים","בריאות","קהילה","אחר..."]
-    st.session_state.chosen_domains = st.multiselect("בחרו עד 3 תחומים *", all_domains, max_selections=3, placeholder="בחר/י עד שלושה תחומים", key="chosen_domains")
+    st.multiselect("בחרו עד 3 תחומים *", all_domains, max_selections=3,
+                   placeholder="בחר/י עד שלושה תחומים", key="chosen_domains")
 
-    if "אחר..." in (st.session_state.chosen_domains or []):
-        st.session_state.domains_other = st.text_input("פרט/י תחום אחר *", key="domains_other")
-    else:
-        st.session_state.domains_other = ""
+    if "אחר..." in (st.session_state.get("chosen_domains") or []):
+        st.text_input("פרט/י תחום אחר *", key="domains_other")
 
-    st.session_state.top_domain = st.selectbox(
+    st.selectbox(
         "מה התחום הכי מועדף עליך, מבין שלושתם? *",
-        ["— בחר/י —"] + st.session_state.chosen_domains if st.session_state.chosen_domains else ["— בחר/י —"],
+        ["— בחר/י —"] + (st.session_state.get("chosen_domains") or []) if st.session_state.get("chosen_domains") else ["— בחר/י —"],
         key="top_domain"
     )
 
@@ -461,13 +452,14 @@ if step == 1:
         with cols[(i - 1) % 2]:
             opts = options_for_rank(i)
             current = st.session_state.get(f"rank_{i}", "— בחר/י —")
-            st.session_state[f"rank_{i}_select"] = st.selectbox(
+            sel = st.selectbox(
                 f"מקום הכשרה {i} (בחר/י מוסד) *",
                 options=opts,
                 index=opts.index(current) if current in opts else 0,
                 key=f"rank_{i}_select_widget"
             )
-            st.session_state[f"rank_{i}"] = st.session_state[f"rank_{i}_select"]
+            st.session_state[f"rank_{i}"] = sel
+            st.session_state[f"rank_{i}_select"] = sel
 
     # הסרת כפילויות בזמן אמת
     used = set()
@@ -480,7 +472,7 @@ if step == 1:
             else:
                 used.add(sel)
 
-    st.session_state.special_request = st.text_area("האם קיימת בקשה מיוחדת הקשורה למיקום או תחום ההתמחות? *", height=100, key="special_request")
+    st.text_area("האם קיימת בקשה מיוחדת הקשורה למיקום או תחום ההתמחות? *", height=100, key="special_request")
 
     st.markdown("---")
     st.session_state.acks[1] = st.checkbox("אני מצהיר/ה כי העדפתי הוזנו במלואן. *", key="ack_1", value=st.session_state.acks.get(1, False))
@@ -488,14 +480,14 @@ if step == 1:
 
 # ===== שלב 3: נתונים אקדמיים =====
 if step == 2:
-    st.session_state.avg_grade = st.number_input("ממוצע ציונים *", min_value=0.0, max_value=100.0, step=0.1, key="avg_grade")
+    st.number_input("ממוצע ציונים *", min_value=0.0, max_value=100.0, step=0.1, key="avg_grade")
     st.markdown("---")
     st.session_state.acks[2] = st.checkbox("אני מצהיר/ה כי הממוצע שהזנתי נכון. *", key="ack_2", value=st.session_state.acks.get(2, False))
     prev_next()
 
 # ===== שלב 4: התאמות =====
 if step == 3:
-    st.session_state.adjustments = st.multiselect(
+    st.multiselect(
         "סוגי התאמות (ניתן לבחור כמה) *",
         ["אין","הריון","מגבלה רפואית (למשל: מחלה כרונית, אוטואימונית)",
          "רגישות למרחב רפואי (למשל: לא לשיבוץ בבית חולים)",
@@ -503,25 +495,22 @@ if step == 3:
          "רקע משפחתי רגיש (למשל: בן משפחה עם פגיעה נפשית)","אחר..."],
         placeholder="בחר/י אפשרויות התאמה", key="adjustments"
     )
-    if "אחר..." in st.session_state.adjustments:
-        st.session_state.adjustments_other = st.text_input("פרט/י התאמה אחרת *", key="adjustments_other")
-    else:
-        st.session_state.adjustments_other = ""
-    if "אין" not in st.session_state.adjustments:
-        st.session_state.adjustments_details = st.text_area("פרט: *", height=100, key="adjustments_details")
-    else:
-        st.session_state.adjustments_details = ""
+    if "אחר..." in (st.session_state.get("adjustments") or []):
+        st.text_input("פרט/י התאמה אחרת *", key="adjustments_other")
+    if "אין" not in (st.session_state.get("adjustments") or []):
+        st.text_area("פרט: *", height=100, key="adjustments_details")
 
     st.markdown("---")
     st.session_state.acks[3] = st.checkbox("אני מצהיר/ה כי מסרתי מידע מדויק על התאמות. *", key="ack_3", value=st.session_state.acks.get(3, False))
     prev_next()
 
+
 # ===== שלב 5: מוטיבציה =====
 if step == 4:
     likert = ["בכלל לא מסכים/ה","1","2","3","4","מסכים/ה מאוד"]
-    st.session_state.m1 = st.radio("1) מוכן/ה להשקיע מאמץ נוסף להגיע למקום המועדף *", likert, horizontal=True, key="m1")
-    st.session_state.m2 = st.radio("2) ההכשרה המעשית חשובה לי כהזדמנות משמעותית להתפתחות *", likert, horizontal=True, key="m2")
-    st.session_state.m3 = st.radio("3) אהיה מחויב/ת להגיע בזמן ולהתמיד גם בתנאים מאתגרים *", likert, horizontal=True, key="m3")
+    st.radio("1) מוכן/ה להשקיע מאמץ נוסף להגיע למקום המועדף *", likert, horizontal=True, key="m1")
+    st.radio("2) ההכשרה המעשית חשובה לי כהזדמנות משמעותית להתפתחות *", likert, horizontal=True, key="m2")
+    st.radio("3) אהיה מחויב/ת להגיע בזמן ולהתמיד גם בתנאים מאתגרים *", likert, horizontal=True, key="m3")
     st.markdown("---")
     st.session_state.acks[4] = st.checkbox("אני מצהיר/ה כי עניתי בכנות על שאלות המוטיבציה. *", key="ack_4", value=st.session_state.acks.get(4, False))
     prev_next()
