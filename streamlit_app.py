@@ -426,7 +426,7 @@ if step == 1:
 
     st.text_area("האם קיימת בקשה מיוחדת הקשורה למיקום או תחום ההתמחות? *", height=100, key="special_request")
 
-    st.markאון("---")
+    st.markdown("---")
     st.session_state.acks[1] = st.checkbox("אני מצהיר/ה כי העדפתי הוזנו במלואן. *", key="ack_1", value=st.session_state.acks.get(1, False))
     save_persisted_state()
     prev_next()
