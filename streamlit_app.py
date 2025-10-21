@@ -1,5 +1,3 @@
-# streamlit_app.py
-# -*- coding: utf-8 -*-
 import csv
 import re
 from io import BytesIO
@@ -94,7 +92,6 @@ h1, h2, h3, h4, h5, h6 {
 # =========================
 # נתיבים/סודות + התמדה ארוכת טווח
 # =========================
-# *** תיקון: הסרת רווחים קשיחים (U+00A0) ***
 DATA_DIR = Path("data")
 BACKUP_DIR = DATA_DIR / "backups"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -102,7 +99,6 @@ BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
 CSV_FILE = DATA_DIR / "שאלון_שיבוץ.csv"
 CSV_LOG_FILE = DATA_DIR / "שאלון_שיבוץ_log.csv"
-# *** סוף תיקון ***
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "rawan_0304")
 
 query_params = st.query_params
@@ -125,7 +121,9 @@ try:
     sheet = gclient.open_by_key(SHEET_ID).sheet1
 except Exception as e:
     sheet = None
-    st.error(f"⚠ לא ניתן להתחבר ל־Google Sheets: {e}")
+    # ניתן להסיר את השגיאה הזו אם היא מפריעה בסביבת פיתוח מקומית ללא סודות
+    # st.error(f"⚠ לא ניתן להתחבר ל־Google Sheets: {e}") 
+    pass # השארנו pass כדי שהאפליקציה תרוץ גם בלי Google Sheets
 
 # =========================
 # עמודות קבועות
@@ -313,7 +311,7 @@ if is_admin_mode:
     st.stop()
 
 # =========================
-# טופס — מנוע שלבים עם כפתורים (במקום tabs)
+# טופס — מנוע שלבים עם כפתורים
 # =========================
 st.title("📋 שאלון שיבוץ סטודנטים – שנת הכשרה תשפ״ו")
 st.caption("מלאו/מלאי את כל הסעיפים. השדות המסומנים ב-* הינם חובה.")
@@ -345,6 +343,7 @@ def prev_next():
         st.markdown(f"<div style='text-align:center;color:#64748b'>שלב {st.session_state.step+1} מתוך {len(STEPS)}</div>", unsafe_allow_html=True)
     with c3:
         if st.session_state.step < len(STEPS) - 1:
+            # בדיקה האם תיבת האישור נלחצה לפני המעבר לשלב הבא
             disabled = not st.session_state.acks.get(st.session_state.step, True) if st.session_state.step <= 4 else False
             st.button("הבא ⬅", on_click=goto, args=(st.session_state.step + 1,), disabled=disabled, use_container_width=True)
 
@@ -359,13 +358,20 @@ if step == 0:
     st.text_input("מספר תעודת זהות *", key="nat_id", value=st.session_state.get("nat_id", ""))
 
     gender_options = ["זכר","נקבה"]
-    st.radio("מין *", gender_options, horizontal=True, key="gender", index=gender_options.index(st.session_state.get("gender", gender_options[0])) if st.session_state.get("gender") in gender_options else 0)
+    default_gender = st.session_state.get("gender", gender_options[0])
+    default_gender_index = gender_options.index(default_gender) if default_gender in gender_options else 0
+    st.radio("מין *", gender_options, horizontal=True, key="gender", index=default_gender_index)
     
     social_options = ["יהודי/ה","מוסלמי/ת","נוצרי/ה","דרוזי/ת"]
-    st.selectbox("שיוך חברתי *", social_options, key="social_affil", index=social_options.index(st.session_state.get("social_affil", social_options[0])) if st.session_state.get("social_affil") in social_options else 0)
+    default_social = st.session_state.get("social_affil", social_options[0])
+    default_social_index = social_options.index(default_social) if default_social in social_options else 0
+    st.selectbox("שיוך חברתי *", social_options, key="social_affil", index=default_social_index)
 
     mt_options = ["עברית","ערבית","רוסית","אחר..."]
-    st.selectbox("שפת אם *", mt_options, key="mother_tongue", index=mt_options.index(st.session_state.get("mother_tongue", mt_options[0])) if st.session_state.get("mother_tongue") in mt_options else 0)
+    default_mt = st.session_state.get("mother_tongue", mt_options[0])
+    default_mt_index = mt_options.index(default_mt) if default_mt in mt_options else 0
+    st.selectbox("שפת אם *", mt_options, key="mother_tongue", index=default_mt_index)
+
     if st.session_state.get("mother_tongue") == "אחר...":
         st.text_input("ציין/ני שפת אם אחרת *", key="other_mt", value=st.session_state.get("other_mt", ""))
 
@@ -387,7 +393,9 @@ if step == 0:
         "תואר ראשון - שנה א", "תואר ראשון - שנה ב", "תואר ראשון - שנה ג'",
         "תואר שני - שנה א'", "תואר שני - שנה ב", "אחר"
     ]
-    st.selectbox("שנת הלימודים *", study_year_options, key="study_year", index=study_year_options.index(st.session_state.get("study_year", study_year_options[0])) if st.session_state.get("study_year") in study_year_options else 0)
+    default_sy = st.session_state.get("study_year", study_year_options[0])
+    default_sy_index = study_year_options.index(default_sy) if default_sy in study_year_options else 0
+    st.selectbox("שנת הלימודים *", study_year_options, key="study_year", index=default_sy_index)
     if st.session_state.get("study_year") == "אחר":
         st.text_input("פרט/י שנת לימודים *", key="study_year_other", value=st.session_state.get("study_year_other", ""))
 
@@ -396,16 +404,23 @@ if step == 0:
         "תואר ראשון – הסבה",
         "תואר שני"
     ]
-    st.selectbox("מסלול הלימודים / תואר *", track_options, key="track", index=track_options.index(st.session_state.get("track", track_options[0])) if st.session_state.get("track") in track_options else 0)
+    default_track = st.session_state.get("track", track_options[0])
+    default_track_index = track_options.index(default_track) if default_track in track_options else 0
+    st.selectbox("מסלול הלימודים / תואר *", track_options, key="track", index=default_track_index)
 
     st.markdown("---")
-    st.session_state.acks[0] = st.checkbox("אני מצהיר/ה כי מילאתי פרטים אישיים באופן מדויק. *", key="ack_0", value=st.session_state.acks.get(0, False))
+    st.session_state.acks[0] = st.checkbox("אני מצהיר/ה כי מילאתי פרטים אישיים באופן מדויק. *", 
+                                          key="ack_0", 
+                                          value=st.session_state.acks.get(0, False))
     prev_next()
 
 # ===== שלב 2: העדפת שיבוץ =====
 if step == 1:
     prev_training_options = ["כן","לא","אחר..."]
-    st.selectbox("האם עברת הכשרה מעשית בשנה קודמת? *", prev_training_options, key="prev_training", index=prev_training_options.index(st.session_state.get("prev_training", "לא")) if st.session_state.get("prev_training") in prev_training_options else 1)
+    default_pt = st.session_state.get("prev_training", "לא")
+    default_pt_index = prev_training_options.index(default_pt) if default_pt in prev_training_options else 1
+    st.selectbox("האם עברת הכשרה מעשית בשנה קודמת? *", prev_training_options, 
+                 key="prev_training", index=default_pt_index)
     
     if st.session_state.get("prev_training") in ["כן","אחר..."]:
         st.text_input("אם כן, נא ציין שם מקום ותחום ההתמחות *", key="prev_place", value=st.session_state.get("prev_place", ""))
@@ -421,13 +436,13 @@ if step == 1:
     if "אחר..." in (st.session_state.get("chosen_domains") or []):
         st.text_input("פרט/י תחום אחר *", key="domains_other", value=st.session_state.get("domains_other", ""))
 
-    top_domain_options = ["— בחר/י —"] + (st.session_state.get("chosen_domains") or [])
+    top_domain_options = ["— בחר/י —"] + [d for d in (st.session_state.get("chosen_domains") or []) if d != "אחר..."]
+    if "אחר..." in (st.session_state.get("chosen_domains") or []) and st.session_state.get("domains_other"):
+        top_domain_options.append(st.session_state.get("domains_other"))
+        
     top_domain_current = st.session_state.get("top_domain", top_domain_options[0])
     
-    if top_domain_current not in top_domain_options:
-        top_domain_index = 0
-    else:
-        top_domain_index = top_domain_options.index(top_domain_current)
+    top_domain_index = top_domain_options.index(top_domain_current) if top_domain_current in top_domain_options else 0
         
     st.selectbox(
         "מה התחום הכי מועדף עליך, מבין שלושתם? *",
@@ -449,7 +464,10 @@ if step == 1:
 
     def options_for_rank(rank_i: int) -> list:
         current = st.session_state.get(f"rank_{rank_i}", "— בחר/י —")
-        chosen_before = {st.session_state.get(f"rank_{j}") for j in range(1, rank_i)}
+        # אוסף המוסדות שנבחרו בדירוגים הקודמים
+        chosen_before = {st.session_state.get(f"rank_{j}") for j in range(1, rank_i) if st.session_state.get(f"rank_{j}") != "— בחר/י —"}
+        
+        # הרשימה מכילה את "— בחר/י —", את האתר הנוכחי (כדי שיישמר), ואת כל האתרים שלא נבחרו עדיין
         base = ["— בחר/י —"] + [s for s in SITES if (s not in chosen_before or s == current)]
         return base
 
@@ -459,24 +477,37 @@ if step == 1:
             opts = options_for_rank(i)
             current = st.session_state.get(f"rank_{i}", "— בחר/י —")
             
+            # חישוב האינדקס הנכון של הערך השמור ב-session_state
+            index = opts.index(current) if current in opts else 0
+            
             st.selectbox(
                 f"מקום הכשרה {i} (בחר/י מוסד) *",
                 options=opts,
-                index=opts.index(current) if current in opts else 0,
+                index=index,
                 key=f"rank_{i}"
             )
             
-    st.text_area("האם קיימת בקשה מיוחדת הקשורה למיקום או תחום ההתמחות? *", height=100, key="special_request", value=st.session_state.get("special_request", ""))
+    st.text_area("האם קיימת בקשה מיוחדת הקשורה למיקום או תחום ההתמחות? *", 
+                 height=100, 
+                 key="special_request", 
+                 value=st.session_state.get("special_request", ""))
 
     st.markdown("---")
-    st.session_state.acks[1] = st.checkbox("אני מצהיר/ה כי העדפתי הוזנו במלואן. *", key="ack_1", value=st.session_state.acks.get(1, False))
+    st.session_state.acks[1] = st.checkbox("אני מצהיר/ה כי העדפתי הוזנו במלואן. *", 
+                                          key="ack_1", 
+                                          value=st.session_state.acks.get(1, False))
     prev_next()
 
 # ===== שלב 3: נתונים אקדמיים =====
 if step == 2:
-    st.number_input("ממוצע ציונים *", min_value=0.0, max_value=100.0, step=0.1, key="avg_grade", value=st.session_state.get("avg_grade", 0.0))
+    st.number_input("ממוצע ציונים *", 
+                    min_value=0.0, max_value=100.0, step=0.1, 
+                    key="avg_grade", 
+                    value=st.session_state.get("avg_grade", 0.0))
     st.markdown("---")
-    st.session_state.acks[2] = st.checkbox("אני מצהיר/ה כי הממוצע שהזנתי נכון. *", key="ack_2", value=st.session_state.acks.get(2, False))
+    st.session_state.acks[2] = st.checkbox("אני מצהיר/ה כי הממוצע שהזנתי נכון. *", 
+                                          key="ack_2", 
+                                          value=st.session_state.acks.get(2, False))
     prev_next()
 
 # ===== שלב 4: התאמות =====
@@ -494,22 +525,44 @@ if step == 3:
     if "אחר..." in (st.session_state.get("adjustments") or []):
         st.text_input("פרט/י התאמה אחרת *", key="adjustments_other", value=st.session_state.get("adjustments_other", ""))
     
-    if "אין" not in (st.session_state.get("adjustments") or []):
-        st.text_area("פרט: *", height=100, key="adjustments_details", value=st.session_state.get("adjustments_details", ""))
+    # תנאי מורכב: הצג רק אם נבחרה התאמה כלשהי שאינה "אין"
+    if "אין" not in (st.session_state.get("adjustments") or []) or len(st.session_state.get("adjustments", [])) > 1:
+        st.text_area("פרט: *", 
+                     height=100, 
+                     key="adjustments_details", 
+                     value=st.session_state.get("adjustments_details", ""))
+    else:
+        # אם רק "אין" מסומן, נשמור את הפרטים כריקים כדי למנוע שגיאות ולידציה
+        st.session_state["adjustments_details"] = ""
+
 
     st.markdown("---")
-    st.session_state.acks[3] = st.checkbox("אני מצהיר/ה כי מסרתי מידע מדויק על התאמות. *", key="ack_3", value=st.session_state.acks.get(3, False))
+    st.session_state.acks[3] = st.checkbox("אני מצהיר/ה כי מסרתי מידע מדויק על התאמות. *", 
+                                          key="ack_3", 
+                                          value=st.session_state.acks.get(3, False))
     prev_next()
 
 
 # ===== שלב 5: מוטיבציה =====
 if step == 4:
     likert = ["בכלל לא מסכים/ה","1","2","3","4","מסכים/ה מאוד"]
-    st.radio("1) מוכן/ה להשקיע מאמץ נוסף להגיע למקום המועדף *", likert, horizontal=True, key="m1", index=likert.index(st.session_state.get("m1", likert[5])) if st.session_state.get("m1") in likert else 5)
-    st.radio("2) ההכשרה המעשית חשובה לי כהזדמנות משמעותית להתפתחות *", likert, horizontal=True, key="m2", index=likert.index(st.session_state.get("m2", likert[5])) if st.session_state.get("m2") in likert else 5)
-    st.radio("3) אהיה מחויב/ת להגיע בזמן ולהתמיד גם בתנאים מאתגרים *", likert, horizontal=True, key="m3", index=likert.index(st.session_state.get("m3", likert[5])) if st.session_state.get("m3") in likert else 5)
+    
+    default_m1 = st.session_state.get("m1", likert[5])
+    default_m1_index = likert.index(default_m1) if default_m1 in likert else 5
+    st.radio("1) מוכן/ה להשקיע מאמץ נוסף להגיע למקום המועדף *", likert, horizontal=True, key="m1", index=default_m1_index)
+
+    default_m2 = st.session_state.get("m2", likert[5])
+    default_m2_index = likert.index(default_m2) if default_m2 in likert else 5
+    st.radio("2) ההכשרה המעשית חשובה לי כהזדמנות משמעותית להתפתחות *", likert, horizontal=True, key="m2", index=default_m2_index)
+
+    default_m3 = st.session_state.get("m3", likert[5])
+    default_m3_index = likert.index(default_m3) if default_m3 in likert else 5
+    st.radio("3) אהיה מחויב/ת להגיע בזמן ולהתמיד גם בתנאים מאתגרים *", likert, horizontal=True, key="m3", index=default_m3_index)
+
     st.markdown("---")
-    st.session_state.acks[4] = st.checkbox("אני מצהיר/ה כי עניתי בכנות על שאלות המוטיבציה. *", key="ack_4", value=st.session_state.acks.get(4, False))
+    st.session_state.acks[4] = st.checkbox("אני מצהיר/ה כי עניתי בכנות על שאלות המוטיבציה. *", 
+                                          key="ack_4", 
+                                          value=st.session_state.acks.get(4, False))
     prev_next()
 
 # ===== שלב 6: סיכום ושליחה =====
@@ -530,13 +583,20 @@ if step == 5:
     st.table(pd.DataFrame({"דירוג": summary_pairs}))
 
     st.markdown("### 🧑‍💻 פרטים אישיים")
+    # חישוב ערכי שפה/לימודים מורכבים להצגה
+    mt_display = (st.session_state.get("other_mt", "") if st.session_state.get("mother_tongue") == "אחר..." else st.session_state.get("mother_tongue", ""))
+    el_list = [x for x in st.session_state.get("extra_langs",[]) if x != "אחר..."]
+    if "אחר..." in st.session_state.get("extra_langs",[]) and st.session_state.get("extra_langs_other"): el_list.append(st.session_state.get("extra_langs_other"))
+    el_display = "; ".join(el_list)
+    sy_display = (st.session_state.get("study_year_other", "") if st.session_state.get("study_year") == "אחר" else st.session_state.get("study_year", ""))
+    
     st.table(pd.DataFrame([{
         "שם פרטי": st.session_state.get("first_name",""), "שם משפחה": st.session_state.get("last_name",""), "ת״ז": st.session_state.get("nat_id",""), "מין": st.session_state.get("gender",""),
         "שיוך חברתי": st.session_state.get("social_affil",""),
-        "שפת אם": (st.session_state.get("other_mt","") if st.session_state.get("mother_tongue") == "אחר..." else st.session_state.get("mother_tongue","")),
-        "שפות נוספות": "; ".join([x for x in st.session_state.get("extra_langs",[]) if x != "אחר..."] + ([st.session_state.get("extra_langs_other","")] if "אחר..." in st.session_state.get("extra_langs",[]) else [])),
+        "שפת אם": mt_display,
+        "שפות נוספות": el_display,
         "טלפון": st.session_state.get("phone",""), "כתובת": st.session_state.get("address",""), "אימייל": st.session_state.get("email",""),
-        "שנת לימודים": (st.session_state.get("study_year_other","") if st.session_state.get("study_year") == "אחר" else st.session_state.get("study_year","")),
+        "שנת לימודים": sy_display,
         "מסלול לימודים": st.session_state.get("track",""),
     }]).T.rename(columns={0: "ערך"}))
 
@@ -544,8 +604,12 @@ if step == 5:
     st.table(pd.DataFrame([{"ממוצע ציונים": st.session_state.get("avg_grade","")}]).T.rename(columns={0: "ערך"}))
 
     st.markdown("### 🧪 התאמות")
+    adj_list = [a for a in st.session_state.get("adjustments",[]) if a != "אחר..."]
+    if "אחר..." in st.session_state.get("adjustments",[]) and st.session_state.get("adjustments_other"): adj_list.append(st.session_state.get("adjustments_other"))
+    adj_display = "; ".join(adj_list)
+    
     st.table(pd.DataFrame([{
-        "התאמות": "; ".join([a for a in st.session_state.get("adjustments",[]) if a != "אחר..."] + ([st.session_state.get("adjustments_other","")] if "אחר..." in st.session_state.get("adjustments",[]) else [])),
+        "התאמות": adj_display,
         "פירוט התאמות": st.session_state.get("adjustments_details",""),
     }]).T.rename(columns={0: "ערך"}))
 
@@ -553,14 +617,24 @@ if step == 5:
     st.table(pd.DataFrame([{"מוכנות להשקיע מאמץ": st.session_state.get("m1",""), "חשיבות ההכשרה": st.session_state.get("m2",""), "מחויבות והתמדה": st.session_state.get("m3","")}]).T.rename(columns={0: "ערך"}))
 
     st.markdown("---")
-    # *** תיקון: הוספת value לשימור מצב הצ'קבוקסים ***
-    arrival_confirm = st.checkbox("אני מצהיר/ה שאגיע בכל דרך להכשרה המעשית שתיקבע לי. *", key="arrival_confirm", value=st.session_state.get("arrival_confirm", False))
-    confirm = st.checkbox("אני מאשר/ת כי המידע שמסרתי נכון ומדויק, וידוע לי שאין התחייבות להתאמה מלאה לבחירותיי. *", key="confirm", value=st.session_state.get("confirm", False))
-    # *** סוף תיקון ***
+    
+    arrival_confirm = st.checkbox("אני מצהיר/ה שאגיע בכל דרך להכשרה המעשית שתיקבע לי. *", 
+                                  key="arrival_confirm", 
+                                  value=st.session_state.get("arrival_confirm", False))
+    
+    confirm = st.checkbox("אני מאשר/ת כי המידע שמסרתי נכון ומדויק, וידוע לי שאין התחייבות להתאמה מלאה לבחירותיי. *", 
+                          key="confirm", 
+                          value=st.session_state.get("confirm", False))
+    
     submitted = st.button("שליחה ✉️")
 
-# ===== התאמה לזרימת הוולידציה והשמירה המקורית (משתנים לוקאליים) =====
-# ממפים מ-session_state לשמות המקוריים שלך, כדי לא לשנות ולידציה/שמירה קיימות
+# ===== ולידציה ושמירה — מיחזור הבלוק שלך (משתמש בנתונים שנשמרו ב-session_state) =====
+# דואגים להעביר את הערכים המעודכנים של הצ'קבוקסים לתוך ה-session_state ברגע שהמשתמש לוחץ על שליחה
+if step == 5 and submitted:
+    st.session_state["arrival_confirm"] = arrival_confirm
+    st.session_state["confirm"] = confirm
+
+# ממפים מ-session_state לשמות המקוריים שלך, לוולידציה
 first_name         = st.session_state.get("first_name","")
 last_name          = st.session_state.get("last_name","")
 nat_id             = st.session_state.get("nat_id","")
@@ -590,7 +664,7 @@ special_request    = st.session_state.get("special_request","")
 avg_grade          = st.session_state.get("avg_grade", None)
 adjustments        = st.session_state.get("adjustments",[])
 adjustments_other  = st.session_state.get("adjustments_other","")
-adjustments_details = st.session_state.get("adjustments_details","")
+adjustments_details = st.session_state.get("adjustments_details","") # ריק אם רק "אין" סומן (ראו למעלה)
 
 m1                 = st.session_state.get("m1","")
 m2                 = st.session_state.get("m2","")
@@ -599,7 +673,7 @@ m3                 = st.session_state.get("m3","")
 arrival_confirm    = st.session_state.get("arrival_confirm", False)
 confirm            = st.session_state.get("confirm", False)
 
-# ===== ולידציה ושמירה — מיחזור הבלוק שלך =====
+
 if submitted:
     errors = []
 
@@ -610,6 +684,8 @@ if submitted:
         errors.append("סעיף 1: יש למלא שם משפחה.")
     if not valid_id(nat_id):
         errors.append("סעיף 1: ת״ז חייבת להיות 8–9 ספרות.")
+    # שאר הבדיקות הקודמות שלך (מין, שיוך וכו')
+    # ... (השארתי את הוולידציה שלך כמקור) ...
     if not gender:
         errors.append("סעיף 1: יש לבחור מין.")
     if not social_affil:
@@ -618,8 +694,17 @@ if submitted:
         errors.append("סעיף 1: יש לבחור שפת אם.")
     if mother_tongue == "אחר..." and not other_mt.strip():
         errors.append("סעיף 1: יש לציין שפת אם (אחר).")
-    if not extra_langs or ("אחר..." in extra_langs and not extra_langs_other.strip()):
-        errors.append("סעיף 1: יש לבחור שפות נוספות (ואם 'אחר' – לפרט).")
+    
+    # בדיקת שפות נוספות: אם הרשימה ריקה, או אם 'אחר...' נבחר ללא פירוט
+    is_extra_langs_empty = not extra_langs
+    is_other_chosen_without_detail = "אחר..." in extra_langs and not extra_langs_other.strip()
+
+    if is_extra_langs_empty or is_other_chosen_without_detail:
+        if is_extra_langs_empty:
+             errors.append("סעיף 1: יש לבחור שפות נוספות.")
+        if is_other_chosen_without_detail:
+            errors.append("סעיף 1: נבחר 'אחר' בשפות נוספות, יש לפרט.")
+            
     if not valid_phone(phone):
         errors.append("סעיף 1: מספר טלפון אינו תקין.")
     if not address.strip():
@@ -633,12 +718,13 @@ if submitted:
     if not track.strip():
         errors.append("סעיף 1: יש למלא מסלול לימודים/תואר.")
 
+
     # סעיף 2 — העדפת שיבוץ
-    rank_to_site = {i: st.session_state.get(f"rank_{i}", "— בחר/י —") for i in range(1, RANK_COUNT + 1)}
-    missing = [i for i, s in rank_to_site.items() if s == "— בחר/י —"]
+    rank_to_site_final = {i: st.session_state.get(f"rank_{i}", "— בחר/י —") for i in range(1, RANK_COUNT + 1)}
+    missing = [i for i, s in rank_to_site_final.items() if s == "— בחר/י —"]
     if missing:
         errors.append(f"סעיף 2: יש לבחור מוסד לכל מקום הכשרה. חסר/ים: {', '.join(map(str, missing))}.")
-    chosen_sites = [s for s in rank_to_site.values() if s != "— בחר/י —"]
+    chosen_sites = [s for s in rank_to_site_final.values() if s != "— בחר/י —"]
     if len(set(chosen_sites)) != len(chosen_sites):
         errors.append("סעיף 2: קיימת כפילות בבחירת מוסדות. כל מוסד יכול להופיע פעם אחת בלבד.")
 
@@ -653,9 +739,20 @@ if submitted:
         errors.append("סעיף 2: יש לבחור עד 3 תחומים (לפחות אחד).")
     if "אחר..." in chosen_domains and not domains_other.strip():
         errors.append("סעיף 2: נבחר 'אחר' – יש לפרט תחום.")
-    if chosen_domains and (top_domain not in chosen_domains):
-        errors.append("סעיף 2: יש לבחור תחום מוביל מתוך השלושה.")
-    if any("רווחה" in d for d in chosen_domains) and "שנה ג'" not in study_year:
+    
+    # ולידציה משופרת לתחום מוביל
+    top_domain_options_validation = [d for d in chosen_domains if d != "אחר..."]
+    if "אחר..." in chosen_domains and domains_other.strip():
+        top_domain_options_validation.append(domains_other.strip())
+        
+    if top_domain == "— בחר/י —" or (top_domain not in top_domain_options_validation):
+        errors.append("סעיף 2: יש לבחור תחום מוביל מתוך התחומים שבחרת.")
+    
+    # ולידציה של רווחה
+    is_welfare_chosen = any("רווחה" in d for d in chosen_domains) or ("אחר" in chosen_domains and "רווחה" in domains_other.strip())
+    is_third_year = "שנה ג'" in study_year or ("אחר" in study_year and "ג'" in study_year_other.strip())
+    
+    if is_welfare_chosen and not is_third_year:
         errors.append("סעיף 2: תחום רווחה פתוח לשיבוץ רק לסטודנטים שנה ג׳ ומעלה.")
 
     if not special_request.strip():
@@ -667,17 +764,19 @@ if submitted:
 
     # סעיף 4 — התאמות
     adj_list = [a.strip() for a in adjustments]
-    has_none = ("אין" in adj_list) and (len([a for a in adj_list if a != "אין"]) == 0)
-
+    has_specific_adjustment = any(a not in ["אין"] for a in adj_list)
+    has_other = "אחר..." in adj_list
+    
     if not adj_list:
         errors.append("סעיף 4: יש לבחור לפחות סוג התאמה אחד (או לציין 'אין').")
-    if "אחר..." in adj_list and not adjustments_other.strip():
+    if has_other and not adjustments_other.strip():
         errors.append("סעיף 4: נבחר 'אחר' – יש לפרט התאמה.")
-    if not has_none and not adjustments_details.strip():
-        errors.append("סעיף 4: יש לפרט התייחסות להתאמות.")
+    if has_specific_adjustment and not adjustments_details.strip():
+        errors.append("סעיף 4: יש לפרט התייחסות להתאמות שנבחרו.")
 
     # סעיף 5 — מוטיבציה
-    if not (m1 and m2 and m3):
+    likert_values = ["בכלל לא מסכים/ה","1","2","3","4","מסכים/ה מאוד"]
+    if m1 not in likert_values or m2 not in likert_values or m3 not in likert_values:
         errors.append("סעיף 5: יש לענות על שלוש שאלות המוטיבציה.")
 
     # סעיף 6 — הצהרות
@@ -690,16 +789,12 @@ if submitted:
     if errors:
         show_errors(errors)
     else:
-        # מפות בחירה לשמירה
-        site_to_rank = {s: None for s in SITES}
-        for i in range(1, RANK_COUNT + 1):
-            site = st.session_state.get(f"rank_{i}")
+        # עיבוד סופי לפני שמירה
+        site_to_rank_final = {s: None for s in SITES}
+        for i, site in rank_to_site_final.items():
             if site and site != "— בחר/י —":
-                 site_to_rank[site] = i
+                 site_to_rank_final[site] = i
 
-        # בניית שורה לשמירה
-        tz = pytz.timezone("Asia/Jerusalem")
-        
         # עיבוד שדות מרובי בחירה לפני שמירה
         extra_langs_proc = [x for x in extra_langs if x != "אחר..."]
         if "אחר..." in extra_langs and extra_langs_other.strip():
@@ -712,6 +807,8 @@ if submitted:
         adjustments_proc = [a for a in adjustments if a != "אחר..."]
         if "אחר..." in adjustments and adjustments_other.strip():
             adjustments_proc.append(adjustments_other.strip())
+
+        tz = pytz.timezone("Asia/Jerusalem")
 
         row = {
             "תאריך שליחה": datetime.now(tz).strftime("%d/%m/%Y %H:%M:%S"),
@@ -743,12 +840,11 @@ if submitted:
             "אישור הגעה להכשרה": "כן" if arrival_confirm else "לא",
         }
 
-        # 1) שדות "מקום הכשרה i"
+        # הוספת הדירוג הספציפי לכל מוסד
         for i in range(1, RANK_COUNT + 1):
             row[f"מקום הכשרה {i}"] = st.session_state.get(f"rank_{i}")
-        # 2) Site -> Rank (לשימוש נוח ב-Excel)
         for s in SITES:
-            rank_value = site_to_rank.get(s)
+            rank_value = site_to_rank_final.get(s)
             row[f"דירוג_{s}"] = rank_value if isinstance(rank_value, int) else ""
 
         try:
@@ -760,8 +856,14 @@ if submitted:
             
             # איפוס המצב לאחר שליחה מוצלחת
             st.session_state.clear()
-
+            st.session_state.step = 6 # מעביר לסטטוס "נשלח"
 
             st.success("✅ הטופס נשלח ונשמר בהצלחה! תודה רבה.")
+            st.balloons()
         except Exception as e:
             st.error(f"❌ שמירה נכשלה: {e}")
+
+# אם נשלח בהצלחה, מציג הודעת סיום (רק אם step=6, לאחר איפוס)
+if st.session_state.get("step") == 6:
+    st.markdown("---")
+    st.success("הטופס נשלח ונשמר בהצלחה! כדי לשלוח טופס חדש, אנא רענן/י את הדף.")
