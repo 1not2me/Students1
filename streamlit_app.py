@@ -346,8 +346,6 @@ def prev_next():
             disabled = not st.session_state.acks.get(st.session_state.step, True) if st.session_state.step <= 4 else False
             st.button("הבא ➡", on_click=goto, args=(st.session_state.step + 1,), disabled=disabled, use_container_width=True)
 
-# בר עליון לניווט מהיר
-nav_bar()
 
 step = st.session_state.step
 st.subheader(STEPS[step])
