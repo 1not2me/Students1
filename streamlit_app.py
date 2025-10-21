@@ -373,6 +373,20 @@ if step == 0:
                    placeholder="בחר/י שפות נוספות", key="extra_langs")
     if "אחר..." in st.session_state.extra_langs:
         st.text_input("ציין/י שפה נוספת (אחר) *", key="extra_langs_other")
+    # ניקוי ערכים לא תקינים לפני הצגת multiselect
+if not isinstance(st.session_state.extra_langs, list):
+    st.session_state.extra_langs = []
+else:
+    st.session_state.extra_langs = [
+        str(x) for x in st.session_state.extra_langs if isinstance(x, str) and x in LANGS_EXTRA_OPTIONS
+    ]
+
+st.multiselect(
+    "ציין/י שפות נוספות (ברמת שיחה) *",
+    LANGS_EXTRA_OPTIONS,
+    placeholder="בחר/י שפות נוספות",
+    key="extra_langs"
+)
 
     st.text_input("מספר טלפון נייד * (למשל 050-1234567)", key="phone")
     st.text_input("כתובת מלאה (כולל יישוב) *", key="address")
