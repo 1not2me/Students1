@@ -333,19 +333,6 @@ if "acks" not in st.session_state:
 def goto(i: int):
     st.session_state.step = int(i)
 
-def nav_bar():
-    st.markdown("#### ניווט מהיר")
-    cols = st.columns(len(STEPS))
-    for i, lbl in enumerate(STEPS):
-        with cols[i]:
-            st.button(
-                f"{i+1}",
-                key=f"jump_{i}",
-                help=lbl,
-                on_click=goto, args=(i,),
-                use_container_width=True
-            )
-    st.markdown("---")
 
 def prev_next():
     c1, c2, c3 = st.columns(3)
